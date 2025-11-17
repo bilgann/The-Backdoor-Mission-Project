@@ -1,0 +1,44 @@
+/* Reusable card frame used by dashboard widgets */
+.card-frame {
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  max-width: 100%;
+  padding: 20px 15px;
+  gap: 12px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  border: 1px solid #454545;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* allow card to stretch to fill parent height when widgets are side-by-side */
+.card-frame {
+  height: 100%;
+}
+
+/* Guarantee a minimum height so bar-area percent heights resolve visually */
+.card-frame {
+  min-height: 440px;
+}
+
+.card-frame.small {
+  width: 320px;
+  padding: 16px;
+}
+
+/* Override for the ClientsTotalPanel to trim bottom spacing and reduce min-height */
+.card-frame.clients-card {
+  /* Keep top padding, reduce bottom padding to decrease bottom gap */
+  padding: 20px 15px 10px;
+  min-height: 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .card-frame {
+    width: 100%;
+  }
+}

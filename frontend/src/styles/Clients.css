@@ -1,0 +1,192 @@
+/* Clients page layout and styles */
+.clients-page {
+  display: flex;
+  flex-direction: column;
+  /* allow the clients page content to scroll when viewport is short */
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding-right: 0;
+  /* Hide native scrollbar but keep scrolling functional */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.clients-page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.number-of-clients-graph {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 20px; /* match other pages' gap below the page title */
+  margin-bottom: 12px;
+}
+
+.clients-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.clients-left {
+  flex: 1 1 65%;
+  display: flex;
+  flex-direction: column;
+}
+
+.clients-right {
+  flex: 1 1 35%;
+}
+
+/* HeadingText component style */
+.heading-text {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+}
+
+/* RecordText small row typography */
+.record-text {
+  color: #6F6C6C;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 130%;
+  white-space: normal; /* allow wrapping for long names */
+  word-break: break-word;
+}
+
+/* Buttons area under search */
+.clients-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Buttons styling for Add client / Show client info */
+.clients-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  gap: 6px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.clients-button span {
+  color: #2B4118;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%;
+  letter-spacing: -0.39px;
+}
+
+.buttons-row {
+  display: flex;
+  justify-content: space-between; /* left button on left, show button on right */
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Recent clients label uses same HeadingText styling but placed 20px below */
+.recent-label { margin-top: 20px }
+
+.search-block {
+  /* Matches the SearchBar fixed width so elements align */
+  width: 431px;
+}
+
+/* Buttons row inside the search-block: place Add on left, Show on right */
+.search-block .buttons-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px; /* increase horizontal separation between the two buttons */
+  margin-top: 8px;
+}
+
+/* Specific CTA color for client buttons (uses ActionButton component) */
+.client-cta {
+  background: #A8E8A6;
+  border: 1px solid #5B5B5B;
+}
+
+.client-cta span {
+  color: #2B4118;
+}
+
+/* Ensure the button content (svg + text) are centered on the same baseline */
+.get-clients-button,
+.client-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px;
+  height: 34px; /* match both buttons */
+  padding: 6px 12px; /* tighten horizontal padding for balance */
+  border-radius: 20px;
+  line-height: 1;
+}
+
+/* Add SVG sizing and consistent spacing for both buttons */
+.search-block .buttons-row > div:first-child .client-cta svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.search-block .buttons-row > div:last-child .client-cta svg {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+/* Table scroll area respects bottom padding of main-content-container */
+.recent-table-wrapper .recent-table-body {
+  display: table-row-group;
+}
+
+/* Override responsive table wrapper on Clients page to allow full width */
+.clients-left .recent-table-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible;
+}
+
+/* no-recent-cell: keep default borders so empty-state shows same grid */
+.no-recent-cell {
+  text-align: center;
+}
+
+/* Small circular color indicator used in recent table service column */
+.service-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .clients-row { flex-direction: column }
+}

@@ -1,0 +1,126 @@
+.clients-total-panel {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.ctp-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 300px; /* reserve left column for title/number/date */
+}
+
+.ctp-title {
+  /* Match TotalClients title style */
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+  margin: 0 0 4px 0;
+}
+
+.ctp-number {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 120%;
+  letter-spacing: -1.08px;
+}
+
+.ctp-date-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px; /* nudge date label and value slightly lower */
+}
+
+.ctp-date-label {
+  color: #000;
+  font-family: 'Satoshi Variable';
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%;
+  letter-spacing: -0.48px;
+}
+
+.ctp-date-value {
+  color: #000;
+  font-family: 'Satoshi Variable';
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%;
+  letter-spacing: -0.72px;
+}
+
+.ctp-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex: 1 1 auto;
+}
+
+.ctp-range-frame {
+  min-width: 180px;
+  max-width: 260px;
+  display: flex;
+  align-items: center;
+}
+
+/* When the range is placed under the date, make it full width of header */
+.ctp-range-under {
+  width: 100%;
+  margin-top: 14px; /* push the time range bar slightly lower under the date */
+}
+
+.ctp-range-inner {
+  /* Use intrinsic width so the right-side spacing equals gaps between items */
+  width: -moz-fit-content;
+  width: fit-content;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #717171;
+  display: flex;
+  gap: 12px; /* uniform gap between options */
+  background: transparent;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.ctp-range-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #8a8a8a;
+  font-size: 12px;
+  cursor: pointer;
+  height: 28px;
+}
+
+.ctp-range-btn.active {
+  background: rgba(17,17,17,0.08);
+  color: #111;
+}
+
+.ctp-range-btn:focus {
+  outline: none;
+}
+
+.ctp-chart {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start; /* align chart top with header */
+}
+
+.clients-total-panel .chart-container {
+  margin-top: 0; /* ensure chart sits at top of body */
+}

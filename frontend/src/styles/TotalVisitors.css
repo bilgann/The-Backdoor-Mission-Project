@@ -1,0 +1,166 @@
+/* Total Visitors Component Styles */
+
+.total-visitors-header {
+  width: 100%;
+  position: relative;
+}
+
+/* Ensure header area matches TotalClients so numbers align horizontally */
+.total-clients-header {
+  min-height: 36px;
+}
+
+
+
+.total-visitors-title {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%;
+  letter-spacing: -0.6px;
+  margin: 0; /* tight wrap */
+}
+
+.total-visitors-date {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: #626262;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 120%;
+}
+
+.total-visitors-number-container {
+  margin-top: 0;
+  display: flex;
+  align-items: baseline;
+}
+
+/* Group header + number to avoid card-level gap between them */
+.header-number-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* remove the CardFrame 12px gap between header and number */
+}
+.header-number-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* remove the CardFrame 12px gap between header and number */
+  /* keep the header-number block from growing so departments can fill the rest */
+  flex: 0 0 auto;
+}
+
+.total-clients-number-container,
+.total-visitors-number-container {
+  margin-top: 0;
+}
+
+.total-visitors-number {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.departments-row {
+  display: flex;
+  margin-top: auto;
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.departments-row {
+  display: flex;
+  gap: 16px;
+  /* allow the departments row to take the remaining vertical space inside the card
+     so the bar area can expand down to the inner card border without changing
+     the outer frame size */
+  flex: 1 1 auto;
+  width: 100%;
+  align-items: stretch; /* stretch columns so their inner bar areas can fill height */
+  justify-content: space-between;
+}
+
+
+/* If a frame-specific rule exists, keep it small but consistent */
+.total-visitors-frame .departments-row {
+  margin-top: 4px; /* very small gap between number and department names */
+}
+.total-visitors-frame .departments-row {
+  margin-top: 4px; /* very small gap between number and department names */
+}
+
+/* Reduce inner bottom padding slightly so bars can reach closer to the card stroke
+   without changing the outer frame size. */
+.total-visitors-frame {
+  /* Match TotalClients inner bottom padding so baselines align */
+  padding-bottom: 20px;
+}
+
+.dept-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0;
+}
+.dept-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* make each column flexible vertically so the bar container can expand */
+  flex: 1 1 0;
+  /* push bar area to the bottom of the column */
+  justify-content: flex-end;
+}
+
+.dept-name {
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%;
+  letter-spacing: -0.36px;
+  margin-bottom: 0;
+}
+
+.dept-pct {
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 120%;
+  margin-top: 12px; /* 12px under the title */
+  margin-bottom: 8px;
+}
+
+.dept-bar-outer {
+  width: 100%;
+  /* Flexible bar container: fills the available vertical space inside the column
+     so percentage heights on the inner bar become visible pixel heights, while
+     `min-height` guarantees bars are visible even when space is tight. */
+  flex: 1 1 auto;
+  min-height: 160px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dept-bar-inner {
+  width: 56px; /* wider bars */
+  border-radius: 5px 5px 0 0;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .card-frame {
+    width: 100%;
+  }
+  .departments-row { gap: 8px; }
+  .dept-column { width: auto; }
+}

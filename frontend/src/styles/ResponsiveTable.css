@@ -1,0 +1,87 @@
+/* Styles for the reusable ResponsiveTable component */
+
+.responsive-table-wrapper {
+  /* wrapper for table: rounded corners and white background */
+  border-radius: 10px;
+  overflow: hidden; /* ensure the radius clips table contents */
+  background: #fff;
+  border: 1px solid #5B5B5B; /* outer border so corner stroke is visible */
+}
+
+.recent-table-wrapper {
+  margin-top: 13px;
+  display: block;
+  /* shorten from the right while keeping the wrapper left-anchored */
+  width: calc(100% - 140px);
+  max-width: calc(100% - 140px);
+  overflow: hidden;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.recent-table {
+  width: 100%;
+  border-collapse: collapse; /* collapse so cell borders form a continuous grid */
+  table-layout: fixed; /* allow column widths to be enforced and long text to wrap */
+}
+
+/* Header cells: show left/right/bottom borders, top border omitted so wrapper border is visible */
+.recent-table thead th {
+  background: #DDFFC2;
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 130%;
+  padding: 8px 12px;
+  text-align: left;
+  border-left: 1px solid #5B5B5B;
+  border-right: 1px solid #5B5B5B;
+  border-bottom: 1px solid #5B5B5B;
+  border-top: none;
+}
+
+.recent-table tbody td {
+  min-height: 40px;
+  height: auto; /* allow wrapping content to increase row height */
+  padding: 8px 12px;
+  color: #6F6C6C;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 130%;
+  border-left: 1px solid #5B5B5B;
+  border-right: 1px solid #5B5B5B;
+  border-bottom: 1px solid #5B5B5B;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Column width hints for better layout with long names */
+.recent-table th:nth-child(1), .recent-table td:nth-child(1) { width: 64%; }
+.recent-table th:nth-child(2), .recent-table td:nth-child(2) { width: 18%; }
+.recent-table th:nth-child(3), .recent-table td:nth-child(3) { width: 18%; }
+
+
+
+/* Remove duplicate outer borders on first/last cells so wrapper border shows at edges */
+.responsive-table-wrapper .recent-table thead th:first-child,
+.responsive-table-wrapper .recent-table tbody tr td:first-child {
+  border-left: none;
+}
+.responsive-table-wrapper .recent-table thead th:last-child,
+.responsive-table-wrapper .recent-table tbody tr td:last-child {
+  border-right: none;
+}
+
+/* Remove bottom border on the last row so wrapper border provides the outer bottom stroke */
+.responsive-table-wrapper .recent-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Special styling for the 'no recent clients' spanning cell: remove vertical separators */
+.no-recent-cell {
+  border-left: none !important;
+  border-right: none !important;
+  text-align: center;
+}

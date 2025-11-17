@@ -1,0 +1,162 @@
+.login-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #EFEFEF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.login-title {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 43.2px */
+  letter-spacing: -1.08px;
+  margin: 0;
+  text-align: center;
+}
+
+.login-form-container {
+  width: 100%;
+  background-color: #FDFDFD;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3D61BB;
+}
+
+.form-group input::placeholder {
+  color: #999;
+}
+
+.error-message {
+  color: #FF0000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
+}
+
+.sign-in-button {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #1C2C55 0%, #3D61BB 50%, #E5F093 100%);
+  color: #FFFFFF;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  margin-top: 8px;
+}
+
+.sign-in-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.sign-in-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sign-in-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.footer-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #000;
+  flex-shrink: 0;
+}
+
+.footer-text {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+@media (max-width: 480px) {
+  .login-form-container {
+    padding: 24px;
+  }
+
+  .login-title {
+    font-size: 28px;
+    letter-spacing: -0.84px;
+  }
+}
+

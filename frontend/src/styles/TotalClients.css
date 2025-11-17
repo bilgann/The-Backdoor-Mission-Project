@@ -1,0 +1,212 @@
+/* Total Clients Component Styles */
+
+.total-clients-container {
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  height: fit-content;
+  padding: 20px 15px 20px 15px;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  border: 1px solid #454545;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* Match TotalVisitors frame height so bottoms align */
+.total-clients-container {
+  min-height: 460px;
+}
+
+/* Header Section: Title and Number */
+.total-clients-header {
+  margin-bottom: 0;
+  width: 100%;
+  align-self: flex-start;
+  position: relative;
+}
+
+/* Ensure TotalClients header reserves space so its number aligns with other cards */
+.total-clients-header {
+  min-height: 36px;
+}
+
+.total-clients-title {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+  margin: 0 0 4px 0;
+}
+
+.total-clients-number-container {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+}
+
+.total-clients-number-container,
+.total-visitors-number-container {
+  margin-top: 0;
+}
+
+.total-clients-number {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%; /* 43.2px */
+  letter-spacing: -1.08px;
+}
+
+.total-clients-date {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: #626262;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 18px */
+  letter-spacing: -0.45px;
+}
+
+
+/* Service Breakdown */
+.service-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  overflow: visible;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  max-height: none;
+}
+
+/* Anchor the service breakdown to the bottom of the card so its bottom stroke
+   lines up with other card baselines when widgets are side-by-side. */
+.service-breakdown {
+  margin-top: auto;
+}
+
+.service-item {
+  display: flex;
+  width: 100%;
+  padding: 4px 8px;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid #626262;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: 28px;
+}
+
+.service-color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.service-name {
+  flex: 1;
+  margin-left: 8px;
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.service-count {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Loading and Error States */
+.loading-message,
+.error-message {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-family: "Satoshi Variable", sans-serif;
+}
+
+.error-message {
+  color: #FF0000;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .total-clients-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .total-clients-title {
+    font-size: 18px;
+  }
+
+  .total-clients-number {
+    font-size: 28px;
+  }
+
+  .total-clients-date {
+    font-size: 13px;
+  }
+
+  .chart-container {
+    height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .total-clients-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .total-clients-title {
+    font-size: 16px;
+  }
+
+  .total-clients-number {
+    font-size: 24px;
+  }
+
+  .total-clients-date {
+    font-size: 12px;
+  }
+
+  .time-range-selector {
+    gap: 4px;
+    padding: 2px;
+  }
+
+  .time-range-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .chart-container {
+    height: 100px;
+  }
+}
+

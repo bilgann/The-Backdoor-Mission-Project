@@ -1,0 +1,58 @@
+.searchbar-container {
+  position: relative;
+  width: 431px; /* specified width */
+}
+
+.searchbar-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  gap: 8px;
+  border-radius: 20px;
+  border: 1px solid #2B4118;
+  background: #DDFFC2;
+  box-sizing: border-box;
+}
+
+.searchbar-icon { flex-shrink: 0 }
+
+.searchbar-text {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #2B4118;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 120%;
+  width: 100%;
+}
+
+
+.searchbar-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #F7FFF0; /* requested color */
+  border-radius: 8px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.06);
+  z-index: 50;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.searchbar-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start; /* left-align the content */
+  align-items: center;
+}
+
+.searchbar-item:hover { background: rgba(0,0,0,0.03) }
+
+.searchbar-item-name { font-family: "Satoshi Variable", sans-serif; color: #2B4118 }
+.searchbar-item-dob { font-family: "Satoshi Variable", sans-serif; color: #6F6C6C; font-size: 12px }

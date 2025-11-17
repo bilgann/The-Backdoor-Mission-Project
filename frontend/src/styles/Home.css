@@ -1,0 +1,117 @@
+/* Home Page Styles */
+
+.home-page {
+  width: 100%;
+}
+
+.home-chart-section {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-widgets {
+  display: flex;
+  flex-direction: row;
+  gap: 8px; /* 8px to the right of TotalClients frame */
+  align-items: stretch; /* ensure cards stretch to same height */
+}
+
+/* Column wrapper so we can place a button directly under the TotalVisitors card. */
+.visitors-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-widgets {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* Ensure the top content of cards aligns so large numbers line up horizontally
+   Note: don't override align-items:stretch above — keep stretch so cards match height. */
+
+/* Get Clients Button */
+.get-clients-button {
+  display: inline-flex;
+  padding: 8px 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  border-radius: 20px;
+  border: 1px solid #5B5B5B;
+  background: #95F492;
+  color: #000;
+  text-decoration: none;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.2s, transform 0.1s;
+  width: fit-content;
+}
+
+/* Ensure the link text never turns blue on hover/visited/focus */
+.get-clients-button,
+.get-clients-button:link,
+.get-clients-button:visited {
+  color: #000;
+}
+
+.get-clients-button:hover,
+.get-clients-button:active,
+.get-clients-button:focus {
+  color: #000;
+  outline: none;
+  -webkit-text-fill-color: #000;
+  text-decoration: none;
+}
+
+.get-clients-button svg {
+  width: 10px;
+  height: 10px;
+}
+
+.get-clients-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.get-clients-button:active {
+  transform: translateY(0);
+}
+
+.get-clients-button svg {
+  flex-shrink: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .home-chart-section {
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  .get-clients-button {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-chart-section {
+    margin-top: 12px;
+    gap: 10px;
+  }
+
+  .get-clients-button {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+}
+

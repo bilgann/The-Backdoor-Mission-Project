@@ -1,0 +1,14 @@
+/* Chart Component Styles */
+
+.chart-container {
+  width: 100%;
+  height: auto; /* let the chart component control height via the prop */
+  margin-bottom: 0;
+  margin-left: -15px;
+  margin-right: -15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+

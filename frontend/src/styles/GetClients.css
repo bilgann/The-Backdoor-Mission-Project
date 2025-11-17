@@ -1,0 +1,28 @@
+/* Get Clients Page Styles */
+
+.get-clients-page {
+  width: 100%;
+}
+
+.get-clients-content {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .get-clients-content {
+    margin-top: 16px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .get-clients-content {
+    margin-top: 12px;
+    gap: 10px;
+  }
+}
+

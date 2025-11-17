@@ -1,0 +1,623 @@
+/* ============================================
+   FONT SETUP - Satoshi Variable
+   ============================================ */
+/* 
+   Note: To use Satoshi Variable font, you need to:
+   1. Add the font files (.woff2, .woff) to a fonts folder in your public directory
+   2. Or use a CDN service that provides Satoshi Variable
+   3. Update the @font-face declarations below with the correct paths
+   
+   Example self-hosted setup:
+   @font-face {
+     font-family: 'Satoshi Variable';
+     src: url('/fonts/Satoshi-Variable.woff2') format('woff2'),
+          url('/fonts/Satoshi-Variable.woff') format('woff');
+     font-weight: 100 900;
+     font-style: normal;
+     font-display: swap;
+   }
+*/
+
+/* For now, using a fallback until font files are added */
+@font-face {
+  font-family: 'Satoshi Variable';
+  src: local('Satoshi Variable'), local('Satoshi-Variable');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
+   GLOBAL RESET & BASE STYLES
+   ============================================ */
+html {
+  height: 100vh;
+}
+
+@media (min-width: 769px) {
+  html {
+    overflow: hidden;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Satoshi Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #EFEFEF;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+}
+
+@media (min-width: 769px) {
+  body {
+    overflow: hidden;
+  }
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+@media (min-width: 769px) {
+  #root {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+/* ============================================
+   MAIN LAYOUT COMPONENT
+   ============================================ */
+.main-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+/* ============================================
+   SIDEBAR COMPONENT STYLES
+   ============================================ */
+.sidebar {
+  background-color: #efefef;
+  min-height: 100vh;
+  width: 255px; /* 205px content + 50px padding (25px each side) */
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-content {
+  padding-left: 25px;
+  padding-right: 25px;
+  padding-top: 25px;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* --- Logo and App Name Container --- */
+.sidebar-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 205px;
+  height: 37px;
+  margin-bottom: 12px;
+}
+
+.sidebar-logo {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: #454545;
+  flex-shrink: 0;
+}
+
+.sidebar-app-name {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  margin: 0;
+}
+
+/* --- User Info Card --- */
+.user-info-card {
+  width: 205px;
+  height: 46px;
+  border-radius: 5px;
+  background: #BDD7F8;
+  display: flex;
+  align-items: center;
+  padding-left: 7px;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.user-avatar-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 5px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: block;
+  object-fit: cover;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.user-name {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.user-email {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 300;
+  line-height: normal;
+}
+
+/* --- Navigation Menu --- */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-title {
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  margin: 0 0 8px 0;
+}
+
+.menu-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 27px;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.menu-link:hover {
+  background-color: #e0e0e0;
+  color: #454545; /* keep text color stable on hover */
+}
+
+.menu-link.active {
+  background: #E0F0FF;
+  border-left: 3px solid #334BD9;
+  padding-left: 9px;
+}
+
+.menu-link svg {
+  flex-shrink: 0;
+}
+
+/* --- Data Entry Section --- */
+.data-entry-title {
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  margin: 0 0 9px 0;
+}
+
+.data-entry-links {
+  display: flex;
+  flex-direction: column;
+  width: 205px;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.data-entry-link {
+  display: flex;
+  padding: 7px 113px 7px 8px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 5px;
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  width: 100%;
+}
+
+.data-entry-link:hover {
+  opacity: 0.9;
+  color: #000; /* ensure no blue text on hover */
+}
+
+.data-entry-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* --- Logout Button --- */
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #FF7373;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 00;
+  line-height: normal;
+  cursor: pointer;
+  margin-top: auto;
+  padding-bottom: 20px;
+  transition: opacity 0.2s;
+}
+
+.logout-button:hover {
+  opacity: 0.8;
+}
+
+.logout-button svg {
+  flex-shrink: 0;
+}
+
+.logout-button span {
+  color: #FF7373;
+}
+
+/* ============================================
+   MAIN CONTENT AREA STYLES
+   ============================================ */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: 100vh;
+  background-color: #EFEFEF;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  padding-right: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* --- Main Content Container (Rectangle) --- */
+.main-content-container {
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: #FDFDFD;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px 15px 20px;
+  box-sizing: border-box;
+}
+
+/* --- Top Bar (Breadcrumb) --- */
+.top-bar {
+  flex-shrink: 0;
+  border-radius: 20px 20px 0 0;
+  border-bottom: 1px solid #ECECEC;
+  background: #FDFDFD;
+  display: flex;
+  align-items: center;
+  padding-left: 17px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  margin: -20px -15px 0 -15px;
+  width: calc(100% + 30px);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #454545;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+/* Breadcrumb link styles: keep same color as surrounding text and remove
+   browser-default blue/underline for link states. */
+.breadcrumb-link,
+.breadcrumb-link:link,
+.breadcrumb-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover,
+.breadcrumb-link:active,
+.breadcrumb-link:focus {
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+  -webkit-text-fill-color: inherit;
+}
+
+.breadcrumb-home-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.breadcrumb-separator-icon {
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* --- Main Content Inner Container --- */
+.main-content-inner {
+  flex: 1;
+  padding-left: 36px;
+  padding-top: 20px;
+  padding-right: 0;
+  padding-bottom: 0;
+  width: 100%;
+  min-height: 0;
+}
+
+@media (min-width: 769px) {
+  .main-content-inner {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content-inner {
+    overflow-y: auto;
+    padding-left: 16px;
+    padding-top: 16px;
+  }
+}
+
+/* ============================================
+   PAGE TITLE STYLES (Applied to all pages)
+   ============================================ */
+.page-title {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 43.2px */
+  letter-spacing: -1.08px;
+  margin: 0;
+}
+
+/* Legacy class for backward compatibility */
+.home-page {
+  width: 100%;
+}
+
+.home-page-title {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 43.2px */
+  letter-spacing: -1.08px;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 1024px) {
+  .main-content {
+    padding-right: 15px;
+  }
+
+  .main-content-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+  }
+
+  .main-content-inner {
+    padding-left: 24px;
+    padding-right: 0;
+    padding-top: 20px;
+    padding-bottom: 0;
+  }
+
+  .page-title,
+  .home-page-title {
+    font-size: 28px;
+    letter-spacing: -0.84px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    height: auto;
+    position: relative;
+  }
+
+  .sidebar-content {
+    padding: 16px;
+  }
+
+  .sidebar-logo-container,
+  .user-info-card {
+    width: 100%;
+  }
+
+  .main-content {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .main-content-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+  }
+
+  .top-bar {
+    border-radius: 15px 15px 0 0;
+    margin: -20px -15px 0 -15px;
+    width: calc(100% + 30px);
+  }
+
+  .main-content-inner {
+    padding-left: 16px;
+    padding-right: 0;
+    padding-top: 20px;
+    padding-bottom: 0;
+  }
+
+  .page-title,
+  .home-page-title {
+    font-size: 24px;
+    letter-spacing: -0.72px;
+  }
+
+  .menu-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .data-entry-links {
+    flex-direction: column;
+    width: 100%;
+    gap: 9px;
+  }
+
+  .data-entry-link {
+    padding: 7px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .main-content-container {
+    border-radius: 12px;
+  }
+
+  .top-bar {
+    border-radius: 12px 12px 0 0;
+    margin: -20px -10px 0 -10px;
+    width: calc(100% + 20px);
+    padding-left: 12px;
+  }
+
+  .main-content-inner {
+    padding-left: 12px;
+  }
+
+  .sidebar-logo-container {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+  }
+
+  .user-info-card {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 12px;
+  }
+
+  .user-info-text {
+    width: 100%;
+  }
+
+  .menu-links {
+    flex-direction: column;
+  }
+
+  .data-entry-links {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .data-entry-link {
+    width: 100%;
+    padding: 7px 12px;
+    box-sizing: border-box;
+  }
+
+  .page-title,
+  .home-page-title {
+    font-size: 20px;
+    letter-spacing: -0.6px;
+  }
+}
+

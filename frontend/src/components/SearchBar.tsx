@@ -10,7 +10,6 @@ import '../styles/SearchBar.css'
 interface MatchItem {
   id: number | string
   name: string
-  dob?: string
 }
 
 const SearchBar: React.FC<{
@@ -36,12 +35,11 @@ const SearchBar: React.FC<{
         const res = await fetch(`${config.API_BASE}/api/clients?query=${encodeURIComponent(query)}`)
         if (!res.ok) return
         const json = await res.json()
-        // Backend returns objects like { client_id, full_name, dob, gender }
-        // Map to the dropdown shape expected here: { id, name, dob }
+        // Backend returns objects like { client_id, full_name, gender }
+        // Map to the dropdown shape expected here: { id, name }
         const mapped = (json || []).map((c: any) => ({
           id: c.client_id ?? c.id,
-          name: c.full_name ?? c.name ?? '',
-          dob: c.dob ?? null
+          name: c.full_name ?? c.name ?? ''
         }))
         setMatches(mapped)
         setOpen(mapped.length > 0)

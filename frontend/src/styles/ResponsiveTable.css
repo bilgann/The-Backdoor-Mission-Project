@@ -58,9 +58,9 @@
 }
 
 /* Column width hints for better layout with long names */
-.recent-table th:nth-child(1), .recent-table td:nth-child(1) { width: 64%; }
-.recent-table th:nth-child(2), .recent-table td:nth-child(2) { width: 18%; }
-.recent-table th:nth-child(3), .recent-table td:nth-child(3) { width: 18%; }
+.recent-table th:nth-child(1), .recent-table td:nth-child(1) { width: 58%; }
+.recent-table th:nth-child(2), .recent-table td:nth-child(2) { width: 21%; }
+.recent-table th:nth-child(3), .recent-table td:nth-child(3) { width: 21%; }
 
 
 

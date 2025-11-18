@@ -1,6 +1,8 @@
 .searchbar-container {
   position: relative;
-  width: 431px; /* specified width */
+  /* allow the searchbar to fill its parent width so it lines up with the recent table */
+  width: 100%;
+  max-width: 560px; /* optional cap so it doesn't become too wide */
 }
 
 .searchbar-input {
@@ -55,4 +57,4 @@
 .searchbar-item:hover { background: rgba(0,0,0,0.03) }
 
 .searchbar-item-name { font-family: "Satoshi Variable", sans-serif; color: #2B4118 }
-.searchbar-item-dob { font-family: "Satoshi Variable", sans-serif; color: #6F6C6C; font-size: 12px }
+/* dob removed from client schema; dob styling not required */

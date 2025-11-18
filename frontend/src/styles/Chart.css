@@ -3,12 +3,20 @@
 .chart-container {
   width: 100%;
   height: auto; /* let the chart component control height via the prop */
-  margin-bottom: 0;
-  margin-left: -15px;
-  margin-right: -15px;
-  padding-left: 15px;
-  padding-right: 15px;
+  margin: 0;
+  padding: 0;
   flex-shrink: 0;
   box-sizing: border-box;
+}
+
+/* Prevent focus outlines/strokes when clicking the chart */
+.chart-container,
+.chart-container *,
+.chart-container svg {
+  outline: none !important;
+}
+
+.chart-container svg {
+  display: block; /* avoid inline spacing pushing layout */
 }
 

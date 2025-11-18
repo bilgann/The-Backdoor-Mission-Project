@@ -2,10 +2,12 @@
 .clients-page {
   display: flex;
   flex-direction: column;
-  /* allow the clients page content to scroll when viewport is short */
-  max-height: calc(100vh - 100px);
+  /* Make page grow and allow scrolling if content exceeds viewport. Use min-height so content can expand. */
+  min-height: calc(100vh - 100px);
   overflow-y: auto;
-  padding-right: 0;
+  padding-right: 15px; /* respect main content right padding to avoid overflow */
+  padding-bottom: 32px; /* ensure bottom content isn't cut off */
+  box-sizing: border-box;
   /* Hide native scrollbar but keep scrolling functional */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
@@ -27,7 +29,9 @@
 .clients-row {
   display: flex;
   gap: 24px;
-  align-items: flex-start;
+  align-items: stretch;
+  /* ensure the row fills enough vertical space so the right column can push the create card to the bottom */
+  min-height: calc(100vh - 320px);
 }
 
 .clients-left {
@@ -38,6 +42,14 @@
 
 .clients-right {
   flex: 1 1 35%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* keep create client block near the top so titles align */
+  align-items: stretch;
+}
+
+.add-client-block {
+  margin-top: 12px; /* nudge down so 'Create Client' title lines up with nearby 'Client Info' title */
 }
 
 /* HeadingText component style */
@@ -103,8 +115,13 @@
 .recent-label { margin-top: 20px }
 
 .search-block {
-  /* Matches the SearchBar fixed width so elements align */
-  width: 431px;
+  /* allow search block to stretch to full width of the left column so it lines up with the recent table */
+  width: 100%;
+}
+
+/* ensure ClientInfo block's card stretches to parent width to align with recent table */
+.client-info-block .card-frame {
+  width: 100%;
 }
 
 /* Buttons row inside the search-block: place Add on left, Show on right */
@@ -189,4 +206,8 @@
 /* Responsive */
 @media (max-width: 900px) {
   .clients-row { flex-direction: column }
+}
+
+@media (max-width: 480px) {
+  .clients-page { padding-right: 10px }
 }

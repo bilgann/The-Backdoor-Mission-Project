@@ -30,15 +30,15 @@ def register_routes(app):
                 standardized += 1
 
         duplicates = (
-            db.session.query(Client.full_name, Client.dob, func.count(Client.client_id))
-            .group_by(Client.full_name, Client.dob)
+            db.session.query(Client.full_name, func.count(Client.client_id))
+            .group_by(Client.full_name)
             .having(func.count(Client.client_id) > 1)
             .all()
         )
         removed = 0
-        for name, dob, cnt in duplicates:
+        for name, cnt in duplicates:
             duplicates_to_delete = (
-                Client.query.filter_by(full_name=name, dob=dob)
+                Client.query.filter_by(full_name=name)
                 .order_by(Client.client_id.asc())
                 .offset(1)
                 .all()
@@ -88,7 +88,7 @@ def register_routes(app):
             data = ClientSchema().load(payload)
         except ValidationError as err:
             return jsonify({"errors": err.messages}), 400
-        existing = Client.query.filter_by(full_name=data["full_name"], dob=data.get("dob")).first()
+        existing = Client.query.filter_by(full_name=data["full_name"]).first()
         if existing:
             return jsonify({"message": "Client exists", "client_id": existing.client_id}), 409
         client = Client(**data)
@@ -296,13 +296,11 @@ def register_routes(app):
             cid = r.get('client_id')
             client = Client.query.get(cid)
             name = client.full_name if client else f"Client #{cid}"
-            dob = client.dob.isoformat() if client and client.dob else None
             date_str = r['date'].isoformat() if r['date'] else (r['datetime'].date().isoformat() if r['datetime'] else None)
             mapped.append({
                 'client_id': cid,
                 'id': cid,
                 'name': name,
-                'dob': dob,
                 'date': date_str,
                 'service': r.get('service'),
                 'color': SERVICE_COLORS.get(r.get('service'), '#CCCCCC')
@@ -404,18 +402,18 @@ def register_routes(app):
                     day_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date == day_date).scalar() or 0
                     chart_data.append({'label': days[i], 'value': int(day_total)})
             elif time_range == 'month':
+                # For the month view return every day so the x-axis shows all days
+                # The chart will show cumulative UNIQUE clients from the start of the month
                 days_in_month = (end_date - start_date).days + 1
-                step = max(1, days_in_month // 10)
-                for i in range(0, days_in_month, step):
-                    day_date = start_date + timedelta(days=i)
-                    day_total = 0
-                    day_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date == day_date).scalar() or 0
-                    chart_data.append({'label': day_date.strftime('%d'), 'value': int(day_total)})
+                for i in range(0, days_in_month):
+                    sample_date = start_date + timedelta(days=i)
+                    client_ids = set()
+                    # collect distinct client ids from start_date up to and including sample_date
+                    for q in [WashroomRecord, CoatCheckRecord, SanctuaryRecord, ClinicRecord, SafeSleepRecord, ClientActivity]:
+                        rows = db.session.query(q.client_id).filter(q.date >= start_date, q.date <= sample_date).distinct().all()
+                        client_ids.update([r[0] for r in rows if r and r[0] is not None])
+
+                    chart_data.append({'label': sample_date.strftime('%d'), 'value': int(len(client_ids))})
             elif time_range == 'year':
                 months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
                 for month in range(1,13):

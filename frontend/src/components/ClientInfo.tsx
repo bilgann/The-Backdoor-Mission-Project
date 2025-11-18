@@ -6,20 +6,18 @@ import "../styles/ClientInfo.css";
 interface ClientInfoProps {
     clientId?: string;
     clientName?: string;
-    dob?: string;
     gender?: string;
 }
 
 type ClientData = {
     clientId?: string;
     clientName?: string;
-    dob?: string;
     gender?: string;
     attendance_count?: number;
     attendance_delta?: string;
 } | null;
 
-const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, dob, gender }) => {
+const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender }) => {
     const [clientData, setClientData] = useState<ClientData>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -34,7 +32,6 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, dob, gend
                 setClientData({
                     clientId: String(data.client_id || id),
                     clientName: data.full_name || "",
-                    dob: data.dob || "",
                     gender: data.gender || "",
                     attendance_count: data.attendance_count ?? undefined,
                     attendance_delta: data.attendance_delta ?? undefined,
@@ -50,16 +47,15 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, dob, gend
     useEffect(() => {
         // show parent-provided details immediately
         if (clientId || clientName) {
-            setClientData({ clientId, clientName, dob, gender });
+            setClientData({ clientId, clientName, gender });
             setLoading(false);
         }
-
         // If we have a clientId, fetch full details unless the parent already supplied gender
-        // (SearchBar provides name/dob but not gender), so fetch to ensure gender is present.
+        // so fetch to ensure gender is present.
         if (clientId && !gender) {
             fetchClientInfo(clientId);
         }
-    }, [clientId, clientName, dob, gender, fetchClientInfo]);
+    }, [clientId, clientName, gender, fetchClientInfo]);
 
     const DeltaPill: React.FC<{ delta?: string }> = ({ delta }) => {
         const text = delta ?? "+4.08 %";
@@ -89,10 +85,7 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, dob, gend
                                 <span className="ci-value">{clientData?.clientId || '—'}</span>
                             </div>
 
-                            <div className="ci-row">
-                                <span className="ci-label">Date of Birth:</span>
-                                <span className="ci-value">{clientData?.dob || '—'}</span>
-                            </div>
+                            {/* Date of birth removed from schema; not displayed */}
 
                             <div className="ci-row">
                                 <span className="ci-label">Gender:</span>

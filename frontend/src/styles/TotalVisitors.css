@@ -95,11 +95,19 @@
   margin-top: 4px; /* very small gap between number and department names */
 }
 
-/* Reduce inner bottom padding slightly so bars can reach closer to the card stroke
+/* Reduce inner bottom padding so bars can reach closer to the card stroke
    without changing the outer frame size. */
 .total-visitors-frame {
-  /* Match TotalClients inner bottom padding so baselines align */
-  padding-bottom: 20px;
+  /* Match other cards' inner bottom padding so baselines align */
+  padding-bottom: 12px;
+  /* Match TotalClients card height so inner content extends similar distance */
+  min-height: 460px;
+}
+
+/* Make visitors card slightly wider for improved layout */
+.total-visitors-frame {
+  width: 480px;
+  max-width: 480px;
 }
 
 .dept-column {
@@ -142,10 +150,10 @@
 .dept-bar-outer {
   width: 100%;
   /* Flexible bar container: fills the available vertical space inside the column
-     so percentage heights on the inner bar become visible pixel heights, while
-     `min-height` guarantees bars are visible even when space is tight. */
+     so percentage heights on the inner bar become visible pixel heights. Increase
+     min-height so bars extend further toward the bottom of the card for visual balance. */
   flex: 1 1 auto;
-  min-height: 160px;
+  min-height: 220px;
   display: flex;
   align-items: flex-end;
   justify-content: center;

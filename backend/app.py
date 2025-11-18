@@ -57,7 +57,6 @@ class Client(db.Model):
     __tablename__ = "client"
     client_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     full_name = db.Column(db.String(255), nullable=False)
-    dob = db.Column(db.Date, nullable=True)
     gender = db.Column(db.String(2), nullable=True)
 
 class WashroomRecord(db.Model):
@@ -119,7 +118,6 @@ class ClientActivity(db.Model):
 class ClientSchema(Schema):
     client_id = fields.Int(dump_only=True)
     full_name = fields.Str(required=True, validate=validate.Length(min=1))
-    dob = fields.Date(required=False)
     gender = fields.Str(required=False, validate=validate.Length(max=2), allow_none=True)
 
 class WashroomSchema(Schema):
@@ -228,17 +226,17 @@ def clean_clients():
             client.full_name = clean_name
             standardized += 1
 
-    # 2) remove duplicate clients (same full_name and dob), keep lowest client_id
+    # 2) remove duplicate clients (same full_name), keep lowest client_id
     duplicates = (
-        db.session.query(Client.full_name, Client.dob, func.count(Client.client_id))
-        .group_by(Client.full_name, Client.dob)
+        db.session.query(Client.full_name, func.count(Client.client_id))
+        .group_by(Client.full_name)
         .having(func.count(Client.client_id) > 1)
         .all()
     )
     removed = 0
-    for name, dob, cnt in duplicates:
+    for name, cnt in duplicates:
         duplicates_to_delete = (
-            Client.query.filter_by(full_name=name, dob=dob)
+            Client.query.filter_by(full_name=name)
             .order_by(Client.client_id.asc())
             .offset(1)
             .all()
@@ -308,9 +306,13 @@ def create_client():
         data = ClientSchema().load(payload)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
+    # Normalize full_name to capitalized initials (e.g. "ruby rose" -> "Ruby Rose")
+    if data.get('full_name'):
+        parts = [p for p in str(data['full_name']).strip().split() if p]
+        data['full_name'] = ' '.join([p.capitalize() for p in parts])
     
-    # check if duplicates exists in the clients table
-    existing = Client.query.filter_by(full_name=data["full_name"], dob=data.get("dob")).first()
+    # check if duplicate exists in the clients table (match by name only)
+    existing = Client.query.filter_by(full_name=data["full_name"]).first()
     if existing:
         return jsonify({"message": "Client exists", "client_id": existing.client_id}), 409
     
@@ -561,7 +563,7 @@ def api_recent_clients():
     """Return a small list of recent clients based on most recent service records.
     The endpoint aggregates recent records from service tables and returns
     unique clients ordered by most-recent service date. Each entry includes:
-    { id, name, dob, date, service }
+    { id, name, date, service }
     """
     try:
         limit = int(request.args.get('limit', 10))
@@ -616,13 +618,11 @@ def api_recent_clients():
         cid = r.get('client_id')
         client = Client.query.get(cid)
         name = client.full_name if client else f"Client #{cid}"
-        dob = client.dob.isoformat() if client and client.dob else None
         date_str = r['date'].isoformat() if r['date'] else (r['datetime'].date().isoformat() if r['datetime'] else None)
         mapped.append({
             'client_id': cid,
             'id': cid,
             'name': name,
-            'dob': dob,
             'date': date_str,
             'service': r.get('service'),
             'color': SERVICE_COLORS.get(r.get('service'), '#CCCCCC')
@@ -1359,11 +1359,10 @@ def get_client_statistics():
                 })
         
         elif time_range == 'month':
-            # Group by day, but only show every few days to avoid crowding
+            # For month view return every day so the x-axis shows all days.
+            # Count all service entries per day (not unique clients) so the line reflects visitor counts.
             days_in_month = (end_date - start_date).days + 1
-            step = max(1, days_in_month // 10)  # Show ~10 data points
-            
-            for i in range(0, days_in_month, step):
+            for i in range(0, days_in_month):
                 day_date = start_date + timedelta(days=i)
                 day_total = 0
                 day_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
@@ -1465,7 +1464,7 @@ class Client(db.Model):
     __tablename__ = "client"
     client_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     full_name = db.Column(db.String(255), nullable=False)
-    dob = db.Column(db.Date, nullable=True)
+    # dob column removed from DB schema
     gender = db.Column(db.String(2), nullable=True)
 
 class WashroomRecord(db.Model):
@@ -1527,7 +1526,7 @@ class ClientActivity(db.Model):
 class ClientSchema(Schema):
     client_id = fields.Int(dump_only=True)
     full_name = fields.Str(required=True, validate=validate.Length(min=1))
-    dob = fields.Date(required=False)
+    # dob removed from schema
     gender = fields.Str(required=False, validate=validate.Length(max=2), allow_none=True)
 
 class WashroomSchema(Schema):
@@ -1636,17 +1635,17 @@ def clean_clients():
             client.full_name = clean_name
             standardized += 1
 
-    # 2) remove duplicate clients (same full_name and dob), keep lowest client_id
+    # 2) remove duplicate clients (same full_name), keep lowest client_id
     duplicates = (
-        db.session.query(Client.full_name, Client.dob, func.count(Client.client_id))
-        .group_by(Client.full_name, Client.dob)
+        db.session.query(Client.full_name, func.count(Client.client_id))
+        .group_by(Client.full_name)
         .having(func.count(Client.client_id) > 1)
         .all()
     )
     removed = 0
-    for name, dob, cnt in duplicates:
+    for name, cnt in duplicates:
         duplicates_to_delete = (
-            Client.query.filter_by(full_name=name, dob=dob)
+            Client.query.filter_by(full_name=name)
             .order_by(Client.client_id.asc())
             .offset(1)
             .all()
@@ -1716,9 +1715,13 @@ def create_client():
         data = ClientSchema().load(payload)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
-    # check if duplicates exists in the clients table
-    existing = Client.query.filter_by(full_name=data["full_name"], dob=data.get("dob")).first()
+    # Normalize full_name to capitalized initials (e.g. "ruby rose" -> "Ruby Rose")
+    if data.get('full_name'):
+        parts = [p for p in str(data['full_name']).strip().split() if p]
+        data['full_name'] = ' '.join([p.capitalize() for p in parts])
+
+    # check if duplicate exists in the clients table (match by name only)
+    existing = Client.query.filter_by(full_name=data["full_name"]).first()
     if existing:
         return jsonify({"message": "Client exists", "client_id": existing.client_id}), 409
     
@@ -1969,7 +1972,7 @@ def api_recent_clients():
     """Return a small list of recent clients based on most recent service records.
     The endpoint aggregates recent records from service tables and returns
     unique clients ordered by most-recent service date. Each entry includes:
-    { id, name, dob, date, service }
+    { id, name, date, service }
     """
     try:
         limit = int(request.args.get('limit', 10))
@@ -2024,13 +2027,11 @@ def api_recent_clients():
         cid = r.get('client_id')
         client = Client.query.get(cid)
         name = client.full_name if client else f"Client #{cid}"
-        dob = client.dob.isoformat() if client and client.dob else None
         date_str = r['date'].isoformat() if r['date'] else (r['datetime'].date().isoformat() if r['datetime'] else None)
         mapped.append({
             'client_id': cid,
             'id': cid,
             'name': name,
-            'dob': dob,
             'date': date_str,
             'service': r.get('service'),
             'color': SERVICE_COLORS.get(r.get('service'), '#CCCCCC')

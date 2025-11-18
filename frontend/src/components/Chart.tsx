@@ -5,7 +5,7 @@
  * Uses recharts library for rendering.
  */
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import '../styles/Chart.css'
 
 interface ChartDataPoint {
@@ -19,12 +19,17 @@ interface ChartProps {
 }
 
 const Chart = ({ data, height = 140 }: ChartProps) => {
+    // compute Y max from data so 0 anchors at the bottom
+    const values = (data || []).map(d => (typeof d.value === 'number' ? d.value : Number(d.value || 0)))
+    const dataMax = values.length ? Math.max(...values) : 0
+    const yMax = Math.max(1, dataMax) // ensure non-zero range
+
     return (
         <div className="chart-container">
             <ResponsiveContainer width="100%" height={height}>
                 <LineChart 
                     data={data}
-                    margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                    margin={{ top: 5, right: 0, left: -12, bottom: 5 }}
                 >
                     {/* Grid lines for better readability */}
                     <CartesianGrid strokeDasharray="3 3" stroke="#B5B5B5" />
@@ -50,7 +55,9 @@ const Chart = ({ data, height = 140 }: ChartProps) => {
                             fontFamily: '"Satoshi Variable", sans-serif',
                             fill: '#B5B5B5'
                         }}
+                        domain={[0, yMax]}
                     />
+                    <Tooltip formatter={(value: any) => [value, 'Count']} />
                     
                     {/* Line: the actual data visualization */}
                     <Line 
@@ -59,8 +66,10 @@ const Chart = ({ data, height = 140 }: ChartProps) => {
                         stroke="#95F492" 
                         strokeWidth={2}
                         dot={false}
+                        activeDot={{ r: 4, stroke: 'none', strokeWidth: 0, fill: '#95F492' }}
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        connectNulls={true}
                     />
                 </LineChart>
             </ResponsiveContainer>

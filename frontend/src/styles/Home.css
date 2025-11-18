@@ -25,6 +25,18 @@
   gap: 12px;
 }
 
+.clients-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 @media (max-width: 768px) {
   .dashboard-widgets {
     flex-direction: column;

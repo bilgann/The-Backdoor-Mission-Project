@@ -17,31 +17,13 @@ import Chart from './Chart'
 import '../styles/TotalClients.css'
 import config from '../config'
 
-// Service colors matching the sidebar data entry colors
-const SERVICE_COLORS: { [key: string]: string } = {
-    'Coat Check': '#FE2323',
-    'Washroom': '#6ECAEE',
-    'Sanctuary': '#D9F373',
-    'Clinic': '#FA488F',
-    'Safe Sleep': '#2C3B9C'
-}
-
 interface ChartDataPoint {
     label: string
     value: number
 }
 
-interface ServiceBreakdown {
-    'Coat Check': number
-    'Washroom': number
-    'Sanctuary': number
-    'Clinic': number
-    'Safe Sleep': number
-}
-
 interface StatisticsData {
     total_clients: number
-    service_breakdown: ServiceBreakdown
     chart_data: ChartDataPoint[]
 }
 
@@ -176,22 +158,8 @@ const TotalClients = () => {
                 onRangeChange={handleTimeRangeChange}
             />
 
-            {/* Line Chart Section */}
-            <Chart data={data.chart_data} height={140} />
-
-            {/* Service Breakdown Section */}
-            <div className="service-breakdown">
-                {Object.entries(data.service_breakdown).map(([service, count]) => (
-                    <div key={service} className="service-item">
-                        <div 
-                            className="service-color-indicator" 
-                            style={{ backgroundColor: SERVICE_COLORS[service] }}
-                        ></div>
-                        <span className="service-name">{service}</span>
-                        <span className="service-count">{count}</span>
-                    </div>
-                ))}
-            </div>
+            {/* Line Chart Section (enlarged now that service breakdown is removed) */}
+            <Chart data={data.chart_data} height={260} />
         </div>
     )
 }

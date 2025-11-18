@@ -62,13 +62,13 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [range])
 
   useEffect(() => {
     fetchStatistics()
     const interval = setInterval(fetchStatistics, 30000)
     return () => clearInterval(interval)
-  }, [fetchStatistics, range])
+  }, [fetchStatistics])
 
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -101,10 +101,8 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
         </div>
       </div>
 
-      {/* Optional time range selector: only shown when the page wants range selection */}
-      {showRangeSelector && (
-        <TimeRangeSlider selectedRange={range} onRangeChange={(r) => setRange(r)} />
-      )}
+      {/* Time range selector placed directly under the total number (sibling to header-number-group) */}
+      <TimeRangeSlider selectedRange={range} onRangeChange={(r) => setRange(r)} />
 
       <div className="departments-row">
         {data.map(dept => (

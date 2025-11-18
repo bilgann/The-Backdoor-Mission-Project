@@ -36,7 +36,8 @@ html {
 
 @media (min-width: 769px) {
   html {
-    overflow: hidden;
+    /* allow vertical scrolling on desktop */
+    overflow-y: auto;
   }
 }
 
@@ -59,7 +60,8 @@ body {
 
 @media (min-width: 769px) {
   body {
-    overflow: hidden;
+    /* allow vertical scrolling on desktop */
+    overflow-y: auto;
   }
 }
 
@@ -71,7 +73,8 @@ body {
 @media (min-width: 769px) {
   #root {
     height: 100vh;
-    overflow: hidden;
+    /* allow vertical scrolling inside root on desktop */
+    overflow-y: auto;
   }
 }
 
@@ -335,7 +338,8 @@ body {
   padding-right: 15px;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  /* allow inner content to scroll when needed */
+  overflow: visible;
 }
 
 /* --- Main Content Container (Rectangle) --- */
@@ -347,7 +351,8 @@ body {
   background: #FDFDFD;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* allow inner content to scroll/expand */
+  overflow: visible;
   padding: 20px 15px 20px;
   box-sizing: border-box;
 }
@@ -413,7 +418,7 @@ body {
   flex: 1;
   padding-left: 36px;
   padding-top: 20px;
-  padding-right: 0;
+  padding-right: 36px;
   padding-bottom: 0;
   width: 100%;
   min-height: 0;
@@ -421,7 +426,10 @@ body {
 
 @media (min-width: 769px) {
   .main-content-inner {
-    overflow: hidden;
+    /* allow vertical scrolling on desktop so long pages (like Clients) can scroll */
+    overflow-y: auto;
+    padding-left: 36px;
+    padding-right: 36px;
   }
 }
 
@@ -479,7 +487,7 @@ body {
 
   .main-content-inner {
     padding-left: 24px;
-    padding-right: 0;
+    padding-right: 24px;
     padding-top: 20px;
     padding-bottom: 0;
   }
@@ -531,7 +539,7 @@ body {
 
   .main-content-inner {
     padding-left: 16px;
-    padding-right: 0;
+    padding-right: 16px;
     padding-top: 20px;
     padding-bottom: 0;
   }
@@ -580,6 +588,7 @@ body {
 
   .main-content-inner {
     padding-left: 12px;
+    padding-right: 12px;
   }
 
   .sidebar-logo-container {
@@ -619,5 +628,21 @@ body {
     font-size: 20px;
     letter-spacing: -0.6px;
   }
+}
+
+/* Hide native scrollbars visually but keep scrolling enabled */
+html, body, #root, .main-content-inner, .clients-page {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+.main-content-inner::-webkit-scrollbar,
+.clients-page::-webkit-scrollbar {
+  display: none; /* WebKit */
+  width: 0;
+  height: 0;
 }
 

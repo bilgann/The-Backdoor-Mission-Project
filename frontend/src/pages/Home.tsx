@@ -21,40 +21,42 @@ const Home = () => {
             {/* Total Clients and Total Visitors side-by-side (8px gap) */}
             <div className="home-chart-section">
                                 <div className="dashboard-widgets">
-                                        <TotalClients />
+                                        {/* Left column: TotalClients + Clients button */}
+                                        <div className="clients-column">
+                                                <TotalClients />
+                                                <div className="button-row">
+                                                    <ActionButton
+                                                        to="/clients"
+                                                        label="clients"
+                                                        className="get-clients-button"
+                                                        icon={(
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                                <path d="M0.5 11.5L11.5 0.5M11.5 0.5H0.5M11.5 0.5V11.5" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            </svg>
+                                                        )}
+                                                    />
+                                                </div>
+                                        </div>
 
-                                        {/* Wrap the visitors card and its button in a column so the button appears
-                                                directly under the TotalVisitors frame. */}
+                                        {/* Right column: TotalVisitors + visitor-data button */}
                                         <div className="visitors-column">
                                                 <TotalVisitors />
-
-                                                {/* 'See visitor data' button placed right under TotalVisitors. Uses the
-                                                        same className as the existing Get Clients button so styles match. */}
-                                                <ActionButton
-                                                    to="/visitor-data"
-                                                    label="see visitor data"
-                                                    className="get-clients-button"
-                                                    icon={(
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                                            <path d="M0.5 11.5L11.5 0.5M11.5 0.5H0.5M11.5 0.5V11.5" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
-                                                        </svg>
-                                                    )}
-                                                />
+                                                <div className="button-row">
+                                                    <ActionButton
+                                                        to="/visitor-data"
+                                                        label="see visitor data"
+                                                        className="get-clients-button"
+                                                        icon={(
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                                <path d="M0.5 11.5L11.5 0.5M11.5 0.5H0.5M11.5 0.5V11.5" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            </svg>
+                                                        )}
+                                                    />
+                                                </div>
                                         </div>
                                 </div>
 
-                                {/* Get Clients Button: reuse the same ActionButton component so the
-                                        implementation is consistent and easy to update in one place. */}
-                                <ActionButton
-                                    to="/get-clients"
-                                    label="get clients"
-                                    className="get-clients-button"
-                                    icon={(
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                            <path d="M0.5 11.5L11.5 0.5M11.5 0.5H0.5M11.5 0.5V11.5" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                    )}
-                                />
+                                {/* removed standalone clients button; now placed next to the visitor-data button */}
             </div>
         </div>
     )

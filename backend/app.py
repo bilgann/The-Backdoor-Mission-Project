@@ -44,10 +44,57 @@ def fix_schema_constraints():
                 db.session.execute(text("DROP INDEX IF EXISTS washroom_records_client_id_idx;"))
             except Exception:
                 pass
+            # Remove accidental unique constraints on client_id for other service tables
+            try:
+                db.session.execute(text("ALTER TABLE coat_check_records DROP CONSTRAINT IF EXISTS coat_check_records_client_id_unique;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("DROP INDEX IF EXISTS coat_check_records_client_id_idx;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("ALTER TABLE sanctuary_records DROP CONSTRAINT IF EXISTS sanctuary_records_client_id_unique;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("DROP INDEX IF EXISTS sanctuary_records_client_id_idx;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("ALTER TABLE clinic_records DROP CONSTRAINT IF EXISTS clinic_records_client_id_unique;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("DROP INDEX IF EXISTS clinic_records_client_id_idx;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("ALTER TABLE safe_sleep_records DROP CONSTRAINT IF EXISTS safe_sleep_records_client_id_unique;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("DROP INDEX IF EXISTS safe_sleep_records_client_id_idx;"))
+            except Exception:
+                pass
+            # Ensure time_out columns are nullable across service tables. Some migrations
+            # accidentally set them NOT NULL which prevents creating records without time_out.
+            try:
+                db.session.execute(text("ALTER TABLE washroom_records ALTER COLUMN time_out DROP NOT NULL;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("ALTER TABLE coat_check_records ALTER COLUMN time_out DROP NOT NULL;"))
+            except Exception:
+                pass
+            try:
+                db.session.execute(text("ALTER TABLE sanctuary_records ALTER COLUMN time_out DROP NOT NULL;"))
+            except Exception:
+                pass
             db.session.commit()
     except Exception:
         # don't crash startup if we can't fix schema here; log to stdout
-        print('Warning: could not verify or modify washroom_records constraints')
+        print('Warning: could not verify or modify constraints')
 
 # Run schema fix at import time (safe no-op if DB not available)
 fix_schema_constraints()
@@ -58,6 +105,9 @@ class Client(db.Model):
     client_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     full_name = db.Column(db.String(255), nullable=False)
     gender = db.Column(db.String(2), nullable=True)
+    # optional secondary identifiers to help disambiguate clients
+    nickname = db.Column(db.String(255), nullable=True)
+    birth_year = db.Column(db.Integer, nullable=True)
 
 class WashroomRecord(db.Model):
     __tablename__ = "washroom_records"
@@ -119,6 +169,8 @@ class ClientSchema(Schema):
     client_id = fields.Int(dump_only=True)
     full_name = fields.Str(required=True, validate=validate.Length(min=1))
     gender = fields.Str(required=False, validate=validate.Length(max=2), allow_none=True)
+    nickname = fields.Str(required=False, allow_none=True)
+    birth_year = fields.Int(required=False, allow_none=True, validate=validate.Range(min=1900, max=2100))
 
 class WashroomSchema(Schema):
     washroom_id = fields.Int(dump_only=True)
@@ -310,13 +362,16 @@ def create_client():
     if data.get('full_name'):
         parts = [p for p in str(data['full_name']).strip().split() if p]
         data['full_name'] = ' '.join([p.capitalize() for p in parts])
-    
-    # check if duplicate exists in the clients table (match by name only)
-    existing = Client.query.filter_by(full_name=data["full_name"]).first()
-    if existing:
-        return jsonify({"message": "Client exists", "client_id": existing.client_id}), 409
-    
-    client = Client(**data)
+
+    # Do not block creation on duplicate names. Duplicate detection should be
+    # performed by the frontend using `/api/clients/suggest` while the staff is
+    # typing. Create the client record with optional nickname and birth_year.
+    client = Client(
+        full_name=data.get('full_name'),
+        gender=data.get('gender'),
+        nickname=data.get('nickname'),
+        birth_year=data.get('birth_year')
+    )
     try:
         db.session.add(client)
         db.session.commit()
@@ -325,6 +380,28 @@ def create_client():
         return jsonify({"message": "Database error", "error": str(e)}), 500
     
     return jsonify({"message": "Client created", "client_id": client.client_id}), 201
+
+
+@app.route('/api/clients/suggest', methods=['GET'])
+def suggest_clients():
+    # Return up to 10 potential existing clients matching the provided query
+    q = request.args.get('query', '')
+    q = (q or '').strip()
+    if not q:
+        return jsonify([]), 200
+    # case-insensitive contains match
+    matches = Client.query.filter(Client.full_name.ilike(f"%{q}%"))
+    matches = matches.limit(10).all()
+    result = []
+    for c in matches:
+        result.append({
+            'client_id': c.client_id,
+            'full_name': c.full_name,
+            'nickname': c.nickname,
+            'birth_year': c.birth_year,
+            'gender': c.gender
+        })
+    return jsonify(result), 200
 
 @app.route("/washroom_records", methods=["POST"])
 def create_washroom_record():
@@ -343,7 +420,11 @@ def create_washroom_record():
     client = Client.query.get(data["client_id"])
     if not client:
         return jsonify({"message": "Client not found"}), 404
-    
+    # Ensure the requested washroom type is not currently occupied (an open record without time_out)
+    occupied = WashroomRecord.query.filter_by(washroom_type=data.get('washroom_type')).filter(WashroomRecord.time_out == None).first()
+    if occupied:
+        return jsonify({"message": f"Washroom {data.get('washroom_type')} is currently occupied"}), 400
+
     was = WashroomRecord(**data)
     try:
         db.session.add(was)
@@ -376,6 +457,11 @@ def create_coat_check_record():
     client = Client.query.get(data["client_id"])
     if not client:
         return jsonify({"message": "Client not found"}), 404
+    
+    # Ensure the requested bin is not currently occupied (an open record without time_out)
+    occupied = CoatCheckRecord.query.filter_by(bin_no=data.get('bin_no')).filter(CoatCheckRecord.time_out == None).first()
+    if occupied:
+        return jsonify({"message": f"Bin {data.get('bin_no')} is currently occupied"}), 400
     
     coat = CoatCheckRecord(**data)
     try:
@@ -595,10 +681,21 @@ def api_recent_clients():
     push_records(ClientActivity.query.order_by(ClientActivity.date.desc()).limit(limit).all(), 'Activity', has_time_in=False)
 
     # Ensure all records have a datetime for ordering. If missing, set a very old fallback
-    from datetime import datetime
+    from datetime import datetime, timezone
     for r in records:
+        # Ensure datetime values are timezone-naive so they can be compared/sorted
         if r['datetime'] is None:
             r['datetime'] = datetime.min
+        else:
+            dt_val = r['datetime']
+            tzinfo = getattr(dt_val, 'tzinfo', None)
+            if tzinfo is not None:
+                try:
+                    # convert to UTC then drop tzinfo to make naive
+                    r['datetime'] = dt_val.astimezone(timezone.utc).replace(tzinfo=None)
+                except Exception:
+                    # fallback: strip tzinfo if astimezone fails
+                    r['datetime'] = dt_val.replace(tzinfo=None)
 
     # Sort by datetime descending (fallback datetimes will appear last)
     records.sort(key=lambda x: x['datetime'], reverse=True)
@@ -1055,6 +1152,18 @@ def delete_client(client_id):
     if not client:
         return jsonify({"message": "Client not found"}), 404
     try:
+        # Remove related records from all service tables so the client is
+        # fully removed across the system. Use bulk deletes for efficiency.
+        WashroomRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        CoatCheckRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        SanctuaryRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        ClinicRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        SafeSleepRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        # ClientActivity and Activity may reference client; remove them too.
+        ClientActivity.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+        Activity.query.filter_by(client_id=client_id).delete(synchronize_session=False)
+
+        # Finally delete the client row
         db.session.delete(client)
         db.session.commit()
     except Exception as e:
@@ -1307,23 +1416,160 @@ def get_client_statistics():
         chart_data = []
         
         if time_range == 'day':
-            # Group by hour (9am to 6pm) and count service entries (not unique clients)
+            # Group by hour (9am to 6pm) using the record's `date` to select today's entries
+            # This avoids mismatches when `time_in` may be stored with timezone information
+            # which can cause comparisons against naive datetimes to miss records.
+            records_today = CoatCheckRecord.query.filter(CoatCheckRecord.date == today).all()
+            # initialize buckets for hours 9..18
+            hour_buckets = {h: 0 for h in range(9, 19)}
+            for r in records_today:
+                ti = getattr(r, 'time_in', None)
+                if ti is None:
+                    continue
+                try:
+                    hr = ti.hour
+                except Exception:
+                    continue
+                if hr in hour_buckets:
+                    hour_buckets[hr] += 1
+
+            for hour in range(9, 19):
+                if hour < 12:
+                    label = f"{hour}am"
+                elif hour == 12:
+                    label = "12pm"
+                else:
+                    label = f"{hour-12}pm"
+
+                chart_data.append({
+                    'label': label,
+                    'value': int(hour_buckets.get(hour, 0))
+                })
+        
+        elif time_range == 'week':
+            # Group by day of week
+            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for i in range(7):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': days[i],
+                    'value': int(day_total)
+                })
+        
+        elif time_range == 'month':
+            # For month view return every day so the x-axis shows all days.
+            # Count all service entries per day (not unique clients) so the line reflects visitor counts.
+            days_in_month = (end_date - start_date).days + 1
+            for i in range(0, days_in_month):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': day_date.strftime('%d'),
+                    'value': int(day_total)
+                })
+        
+        elif time_range == 'year':
+            # Group by month
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            for month in range(1, 13):
+                    month_start = today.replace(month=month, day=1)
+                    if month == 12:
+                        month_end = today.replace(month=12, day=31)
+                    else:
+                        month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
+
+                    month_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date >= month_start, CoatCheckRecord.date <= month_end).scalar() or 0
+
+                    chart_data.append({
+                        'label': months[month - 1],
+                        'value': int(month_total)
+                    })
+        
+        return jsonify({
+            'success': True,
+            'total_clients': total_clients,
+            'service_breakdown': service_breakdown,
+            'chart_data': chart_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching statistics',
+            'error': str(e)
+        }), 500
+    
+# ---------------- COAT CHECK STATISTICS ----------------
+@app.route('/api/coat-check-statistics', methods=['GET'])
+def get_coat_check_statistics():
+    """
+    Get client statistics based on time range (day, week, month, year)
+    Returns total clients and breakdown by service type
+    """
+    try:
+        from datetime import datetime, timedelta
+        time_range = request.args.get('range', 'day')  # day, week, month, year
+        
+        # Calculate date range based on selection
+        today = datetime.now().date()
+        
+        if time_range == 'day':
+            start_date = today
+            end_date = today
+        elif time_range == 'week':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif time_range == 'month':
+            start_date = today.replace(day=1)
+            # Get last day of month
+            if today.month == 12:
+                end_date = today.replace(day=31)
+            else:
+                end_date = (today.replace(month=today.month + 1, day=1) - timedelta(days=1))
+        elif time_range == 'year':
+            start_date = today.replace(month=1, day=1)
+            end_date = today.replace(month=12, day=31)
+        else:
+            start_date = today
+            end_date = today
+        
+        # Get all unique clients from all service tables within date range (for total unique clients)
+        client_ids = set()
+
+        coat_check_clients = db.session.query(CoatCheckRecord.client_id).filter(
+            CoatCheckRecord.date >= start_date,
+            CoatCheckRecord.date <= end_date
+        ).distinct().all()
+        client_ids.update([c[0] for c in coat_check_clients])
+
+         # Get breakdown by service as counts of entries (not distinct clients)
+        coat_check_count = db.session.query(func.count(CoatCheckRecord.check_id)).filter(
+            CoatCheckRecord.date >= start_date,
+            CoatCheckRecord.date <= end_date
+        ).scalar() or 0
+
+        service_breakdown = {
+            'Coat Check': int(coat_check_count)
+        }
+
+        # total_clients should represent total service usages (sum of all service counts)
+        total_clients = int(coat_check_count)
+        
+        # Get hourly/daily/monthly data for the chart
+        chart_data = []
+        
+        if time_range == 'day':
+            # Group by hour (9am to 6pm) and count coat check entries only
             for hour in range(9, 19):  # 9am to 6pm
                 hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
                 hour_end = hour_start + timedelta(hours=1)
 
-                hour_total = 0
-                hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(
-                    WashroomRecord.time_in >= hour_start,
-                    WashroomRecord.time_in < hour_end
-                ).scalar() or 0
-                hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(
+                hour_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(
                     CoatCheckRecord.time_in >= hour_start,
                     CoatCheckRecord.time_in < hour_end
-                ).scalar() or 0
-                hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(
-                    SanctuaryRecord.time_in >= hour_start,
-                    SanctuaryRecord.time_in < hour_end
                 ).scalar() or 0
 
                 # Format hour label (9am, 10am, 11am, 12pm, 1pm, 2pm, etc.)
@@ -1344,14 +1590,7 @@ def get_client_statistics():
             days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             for i in range(7):
                 day_date = start_date + timedelta(days=i)
-                day_total = 0
-                day_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
-                # include activity records by date
-                day_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date == day_date).scalar() or 0
+                day_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
 
                 chart_data.append({
                     'label': days[i],
@@ -1364,14 +1603,7 @@ def get_client_statistics():
             days_in_month = (end_date - start_date).days + 1
             for i in range(0, days_in_month):
                 day_date = start_date + timedelta(days=i)
-                day_total = 0
-                day_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
-                day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
-                # include activity records for the month grouping
-                day_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date == day_date).scalar() or 0
+                day_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
 
                 chart_data.append({
                     'label': day_date.strftime('%d'),
@@ -1388,14 +1620,7 @@ def get_client_statistics():
                 else:
                     month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
 
-                month_total = 0
-                month_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date >= month_start, WashroomRecord.date <= month_end).scalar() or 0
-                month_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date >= month_start, CoatCheckRecord.date <= month_end).scalar() or 0
-                month_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date >= month_start, SanctuaryRecord.date <= month_end).scalar() or 0
-                month_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= month_start, ClinicRecord.date <= month_end).scalar() or 0
-                month_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date >= month_start, SafeSleepRecord.date <= month_end).scalar() or 0
-                # include activity records in monthly aggregation
-                month_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date >= month_start, Activity.date <= month_end).scalar() or 0
+                month_total = db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date >= month_start, CoatCheckRecord.date <= month_end).scalar() or 0
 
                 chart_data.append({
                     'label': months[month - 1],
@@ -1408,7 +1633,146 @@ def get_client_statistics():
             'service_breakdown': service_breakdown,
             'chart_data': chart_data
         }), 200
-        
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching statistics',
+            'error': str(e)
+        }), 500
+
+# ---------------- WASHROOM STATISTICS ----------------
+@app.route('/api/washroom-statistics', methods=['GET'])
+def get_washroom_statistics():
+    """
+    Get washroom statistics based on time range (day, week, month, year)
+    Returns total washroom records
+    """
+    try:
+        from datetime import datetime, timedelta
+        time_range = request.args.get('range', 'day')  # day, week, month, year
+
+        # Calculate date range based on selection
+        today = datetime.now().date()
+
+        if time_range == 'day':
+            start_date = today
+            end_date = today
+        elif time_range == 'week':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif time_range == 'month':
+            start_date = today.replace(day=1)
+            # Get last day of month
+            if today.month == 12:
+                end_date = today.replace(day=31)
+            else:
+                end_date = (today.replace(month=today.month + 1, day=1) - timedelta(days=1))
+        elif time_range == 'year':
+            start_date = today.replace(month=1, day=1)
+            end_date = today.replace(month=12, day=31)
+        else:
+            start_date = today
+            end_date = today
+
+        # Get unique clients who used the washroom in the date range
+        client_ids = set()
+
+        washroom_clients = db.session.query(WashroomRecord.client_id).filter(
+            WashroomRecord.date >= start_date,
+            WashroomRecord.date <= end_date
+        ).distinct().all()
+        client_ids.update([c[0] for c in washroom_clients])
+
+        # Get breakdown by service as counts of entries (not distinct clients)
+        washroom_count = db.session.query(func.count(WashroomRecord.washroom_id)).filter(
+            WashroomRecord.date >= start_date,
+            WashroomRecord.date <= end_date
+        ).scalar() or 0
+
+        service_breakdown = {
+            'Washroom': int(washroom_count)
+        }
+
+        # total_clients here represents total washroom usages
+        total_clients = int(washroom_count)
+
+        # Get hourly/daily/monthly data for the chart
+        chart_data = []
+
+        if time_range == 'day':
+            # Group by hour (9am to 6pm) and count washroom entries only
+            for hour in range(9, 19):  # 9am to 6pm
+                hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
+                hour_end = hour_start + timedelta(hours=1)
+
+                hour_total = db.session.query(func.count(WashroomRecord.washroom_id)).filter(
+                    WashroomRecord.time_in >= hour_start,
+                    WashroomRecord.time_in < hour_end
+                ).scalar() or 0
+
+                # Format hour label (9am, 10am, 11am, 12pm, 1pm, 2pm, etc.)
+                if hour < 12:
+                    label = f"{hour}am"
+                elif hour == 12:
+                    label = "12pm"
+                else:
+                    label = f"{hour-12}pm"
+
+                chart_data.append({
+                    'label': label,
+                    'value': int(hour_total)
+                })
+
+        elif time_range == 'week':
+            # Group by day of week
+            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for i in range(7):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': days[i],
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'month':
+            # For month view return every day so the x-axis shows all days.
+            # Count all service entries per day (not unique clients) so the line reflects visitor counts.
+            days_in_month = (end_date - start_date).days + 1
+            for i in range(0, days_in_month):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': day_date.strftime('%d'),
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'year':
+            # Group by month
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            for month in range(1, 13):
+                month_start = today.replace(month=month, day=1)
+                if month == 12:
+                    month_end = today.replace(month=12, day=31)
+                else:
+                    month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
+
+                month_total = db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date >= month_start, WashroomRecord.date <= month_end).scalar() or 0
+
+                chart_data.append({
+                    'label': months[month - 1],
+                    'value': int(month_total)
+                })
+
+        return jsonify({
+            'success': True,
+            'total_clients': total_clients,
+            'service_breakdown': service_breakdown,
+            'chart_data': chart_data
+        }), 200
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -2001,7 +2365,6 @@ def api_recent_clients():
     push_records(SanctuaryRecord.query.order_by(SanctuaryRecord.date.desc()).limit(limit).all(), 'Sanctuary', has_time_in=True)
     push_records(ClinicRecord.query.order_by(ClinicRecord.date.desc()).limit(limit).all(), 'Clinic', has_time_in=False)
     push_records(SafeSleepRecord.query.order_by(SafeSleepRecord.date.desc()).limit(limit).all(), 'Safe Sleep', has_time_in=False)
-    push_records(ClientActivity.query.order_by(ClientActivity.date.desc()).limit(limit).all(), 'Activity', has_time_in=False)
 
     # Ensure all records have a datetime for ordering. If missing, set a very old fallback
     from datetime import datetime
@@ -2019,7 +2382,6 @@ def api_recent_clients():
         'Sanctuary': '#D9F373',
         'Clinic': '#FA488F',
         'Safe Sleep': '#2C3B9C',
-        'Activity': '#A8A8A8'
     }
 
     mapped = []

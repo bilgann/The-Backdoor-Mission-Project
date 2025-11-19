@@ -97,6 +97,13 @@ const TotalClients = () => {
         return () => clearInterval(interval)
     }, [fetchStatistics]) // Re-run when fetchStatistics changes (which happens when timeRange changes)
 
+    // Refresh immediately when other parts of the app signal data changes
+    useEffect(() => {
+        const onData = () => fetchStatistics()
+        window.addEventListener('dataUpdated', onData)
+        return () => window.removeEventListener('dataUpdated', onData)
+    }, [fetchStatistics])
+
     /**
      * Handle time range selection change
      * When user clicks D/W/M/Y, update the state which triggers a new API call

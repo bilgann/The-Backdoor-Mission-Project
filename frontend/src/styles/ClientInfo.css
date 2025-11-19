@@ -68,7 +68,7 @@
 .activities-label::after {
 	content: "";
 	display: block;
-	height: 2px;
+	height: 1px;
 	width: 50%; /* half length */
 	background: #000;
 	margin-top: 6px;

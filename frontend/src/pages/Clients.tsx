@@ -45,7 +45,7 @@ const Clients: React.FC = () => {
         'Sanctuary': '#D9F373',
         'Clinic': '#FA488F',
         'Safe Sleep': '#2C3B9C',
-        'Activity': '#A8A8A8'
+        'Activity': '#F07D0B'
     }
 
     return (
@@ -107,7 +107,10 @@ const Clients: React.FC = () => {
                         <div style={{ marginTop: 12 }}>
                             <ClientForm onSuccess={() => {
                                 // refresh recent clients list
-                                fetch(`${config.API_BASE}/api/clients/recent`).then(r => r.json()).then(d => setRecent(d || [])).catch(() => {});
+                                fetch(`${config.API_BASE}/api/clients/recent`)
+                                .then(r => r.json())
+                                .then(d => setRecent(d || []))
+                                .catch(() => {});
                             }} />
                         </div>
                     </div>

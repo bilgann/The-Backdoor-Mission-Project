@@ -1,0 +1,111 @@
+/* (Coat Check specific table/chart overrides) */
+.coat-check-left .recent-table-wrapper {
+	width: 100% !important;
+	max-width: 100% !important;
+	overflow: visible;
+}
+
+/* Match header background color requested for coat check table */
+.coat-check-left .recent-table thead th {
+	background: #FF9898 !important;
+	color: #454545 !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 12px !important;
+	font-style: normal !important;
+	font-weight: 500 !important;
+	line-height: 130% !important; /* 15.6px */
+}
+
+/* Submit and time-out buttons styling */
+.coatcheck-submit {
+	border-radius: 20px !important;
+	background: #F93D3D !important;
+	color: #fff !important;
+	border: none !important;
+	padding: 8px 12px !important;
+}
+
+.coatcheck-timeout {
+	border-radius: 20px !important;
+	background: #FD5151 !important;
+	color: #454545 !important;
+	border: none !important;
+	padding: 6px 10px !important;
+}
+
+/* Make recent coat check table rows a bit more compact to match Recent Clients */
+.coat-check-left .recent-table tbody td {
+	/* match Recent Clients table cell sizing for exact visual parity */
+	min-height: 40px !important;
+	padding: 8px 12px !important;
+}
+
+/* Ensure circular service indicators (if any) remain aligned */
+.coat-check-left .service-cell { align-items: center }
+
+/* Force coat-check chart line color in case stroke prop is not applied */
+.coat-check-left .chart-line {
+	stroke: #FD5151 !important;
+}
+
+/* Explicit column width hints so all 5 columns show and match clients layout */
+.coat-check-left .recent-table th:nth-child(1), .coat-check-left .recent-table td:nth-child(1) { width: 46%; }
+.coat-check-left .recent-table th:nth-child(2), .coat-check-left .recent-table td:nth-child(2) { width: 12%; }
+.coat-check-left .recent-table th:nth-child(3), .coat-check-left .recent-table td:nth-child(3) { width: 14%; }
+.coat-check-left .recent-table th:nth-child(4), .coat-check-left .recent-table td:nth-child(4) { width: 14%; }
+.coat-check-left .recent-table th:nth-child(5), .coat-check-left .recent-table td:nth-child(5) { width: 14%; }
+
+/* Ensure SearchBar used inside the CardFrame form stretches to full width like cf-input */
+.client-form-card .searchbar-container { max-width: 100% !important; width: 100% !important; }
+.client-form-card .searchbar-input.form .searchbar-text { width: 100% !important; }
+.client-form-card .cf-input { width: 100% !important; }
+
+/* place the card 20px below the Enter Record label */
+.coat-check-right .client-form-card { margin-top: 20px; }
+
+/* Layout: place left and right columns side-by-side like Clients page */
+.coat-check-row {
+	display: flex;
+	gap: 24px;
+	align-items: flex-start;
+}
+
+.coat-check-left {
+	flex: 1 1 65%;
+	display: flex;
+	flex-direction: column;
+}
+
+.coat-check-right {
+	flex: 1 1 35%;
+	display: flex;
+	flex-direction: column;
+}
+
+@media (max-width: 900px) {
+	.coat-check-row { flex-direction: column }
+}
+
+/* Center the time-out button inside its cell without changing text flow */
+.coat-check-left .recent-table tbody td:nth-child(5) {
+	text-align: center !important;
+	vertical-align: middle !important;
+}
+
+.coat-check-left .recent-table tbody td:nth-child(5) > .coatcheck-timeout {
+	display: inline-block !important;
+	margin: 0 !important;
+	vertical-align: middle !important;
+}
+
+/* Remove focus/active outline for the timeout button only */
+.coat-check-left .recent-table tbody td:nth-child(5) > .coatcheck-timeout:focus,
+.coat-check-left .recent-table tbody td:nth-child(5) > .coatcheck-timeout:active,
+.coat-check-left .recent-table tbody td:nth-child(5) > .coatcheck-timeout:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+	-webkit-box-shadow: none !important;
+	border: none !important;
+}
+
+

@@ -13,13 +13,16 @@ type ClientData = {
     clientId?: string;
     clientName?: string;
     gender?: string;
+    nickname?: string | null;
+    birth_year?: number | null;
     attendance_count?: number;
     attendance_delta?: string;
 } | null;
 
 const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender }) => {
     const [clientData, setClientData] = useState<ClientData>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    // default to not loading; show "Choose a client" when nothing selected
+    const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchClientInfo = useCallback(async (id: string) => {
@@ -32,6 +35,8 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
                 setClientData({
                     clientId: String(data.client_id || id),
                     clientName: data.full_name || "",
+                    nickname: data.nickname ?? null,
+                    birth_year: data.birth_year ?? null,
                     gender: data.gender || "",
                     attendance_count: data.attendance_count ?? undefined,
                     attendance_delta: data.attendance_delta ?? undefined,
@@ -45,15 +50,20 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
     }, []);
 
     useEffect(() => {
+        // If no client is selected, reset to idle state so UI shows "Choose a client"
+        if (!clientId && !clientName) {
+            setClientData(null)
+            setLoading(false)
+            return
+        }
+
         // show parent-provided details immediately
         if (clientId || clientName) {
             setClientData({ clientId, clientName, gender });
-            setLoading(false);
-        }
-        // If we have a clientId, fetch full details unless the parent already supplied gender
-        // so fetch to ensure gender is present.
-        if (clientId && !gender) {
-            fetchClientInfo(clientId);
+            // if we have a clientId and need more details, fetch them
+            if (clientId && !gender) {
+                fetchClientInfo(clientId);
+            }
         }
     }, [clientId, clientName, gender, fetchClientInfo]);
 
@@ -72,6 +82,8 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
                     <div className="loading-message">Loading client...</div>
                 ) : error ? (
                     <div className="error-message">{error}</div>
+                ) : !clientData ? (
+                    <div className="loading-message">Choose a client</div>
                 ) : (
                     <>
                         <div className="ci-rows">
@@ -85,7 +97,15 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
                                 <span className="ci-value">{clientData?.clientId || '—'}</span>
                             </div>
 
-                            {/* Date of birth removed from schema; not displayed */}
+                            <div className="ci-row">
+                                <span className="ci-label">Preferred Name:</span>
+                                <span className="ci-value">{clientData?.nickname ?? '—'}</span>
+                            </div>
+
+                            <div className="ci-row">
+                                <span className="ci-label">Birth Year:</span>
+                                <span className="ci-value">{clientData?.birth_year ?? '—'}</span>
+                            </div>
 
                             <div className="ci-row">
                                 <span className="ci-label">Gender:</span>

@@ -70,6 +70,13 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
     return () => clearInterval(interval)
   }, [fetchStatistics])
 
+  // Refresh immediately when other parts of the app signal data changes
+  useEffect(() => {
+    const onData = () => fetchStatistics()
+    window.addEventListener('dataUpdated', onData)
+    return () => window.removeEventListener('dataUpdated', onData)
+  }, [fetchStatistics])
+
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   if (loading && data.length === 0) {

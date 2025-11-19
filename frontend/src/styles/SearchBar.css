@@ -18,6 +18,22 @@
   box-sizing: border-box;
 }
 
+/* when SearchBar is used as a form-style input, allow the inner input to adopt the cf-input styling */
+.searchbar-input.form {
+  background: transparent;
+  border: none;
+  padding: 0;
+  height: auto;
+}
+
+.searchbar-input.form .searchbar-text {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #E5E5E5;
+  background: transparent;
+  height: auto;
+}
+
 .searchbar-icon { flex-shrink: 0 }
 
 .searchbar-text {
@@ -25,10 +41,12 @@
   background: transparent;
   outline: none;
   color: #2B4118;
-  font-family: "Satoshi Variable", sans-serif;
+  font-family: "Satoshi Variable";
   font-size: 13px;
+  font-style: normal;
   font-weight: 400;
   line-height: 120%;
+  letter-spacing: -0.39px;
   width: 100%;
 }
 
@@ -38,13 +56,17 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: #F7FFF0; /* requested color */
+  background: #fdfdfd;
   border-radius: 8px;
   box-shadow: 0 6px 12px rgba(0,0,0,0.06);
   z-index: 50;
   max-height: 240px;
   overflow: auto;
+  /* hide scrollbar visually but keep scroll functionality */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
+.searchbar-dropdown::-webkit-scrollbar { display: none; }
 
 .searchbar-item {
   padding: 8px 12px;
@@ -54,7 +76,10 @@
   align-items: center;
 }
 
-.searchbar-item:hover { background: rgba(0,0,0,0.03) }
+.searchbar-item:hover { background: #f2f2f2 }
 
+.searchbar-item-main { display:flex; flex-direction:column }
 .searchbar-item-name { font-family: "Satoshi Variable", sans-serif; color: #2B4118 }
+.searchbar-item-nick { color: var(--sds-color-text-default-tertiary); font-weight: 400; margin-left: 6px }
+.searchbar-item-meta { color: var(--sds-color-text-default-tertiary); font-size: 12px; margin-top: 4px }
 /* dob removed from client schema; dob styling not required */

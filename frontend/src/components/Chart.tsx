@@ -16,9 +16,10 @@ interface ChartDataPoint {
 interface ChartProps {
     data: ChartDataPoint[]
     height?: number
+    lineColor?: string
 }
 
-const Chart = ({ data, height = 140 }: ChartProps) => {
+const Chart = ({ data, height = 140, lineColor = '#95F492' }: ChartProps) => {
     // compute Y max from data so 0 anchors at the bottom
     const values = (data || []).map(d => (typeof d.value === 'number' ? d.value : Number(d.value || 0)))
     const dataMax = values.length ? Math.max(...values) : 0
@@ -63,10 +64,11 @@ const Chart = ({ data, height = 140 }: ChartProps) => {
                     <Line 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#95F492" 
+                        stroke={lineColor} 
+                        className="chart-line"
                         strokeWidth={2}
                         dot={false}
-                        activeDot={{ r: 4, stroke: 'none', strokeWidth: 0, fill: '#95F492' }}
+                        activeDot={{ r: 4, stroke: 'none', strokeWidth: 0, fill: lineColor }}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         connectNulls={true}

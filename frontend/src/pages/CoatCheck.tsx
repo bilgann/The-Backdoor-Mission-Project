@@ -1,6 +1,222 @@
-const CoatCheck = () => {
+import React, { useEffect, useState } from "react";
+import "../styles/CoatCheck.css";
+import "../styles/Clients.css";
+import config from "../config";
+import RecordText from "../components/RecordText";
+import ResponsiveTable from "../components/ResponsiveTable";
+import CoatCheckPanel from '../components/CoatCheckPanel';
+import SearchBar from '../components/SearchBar';
+import ActionButton from '../components/ActionButton';
+import CardFrame from '../components/CardFrame';
+
+
+const CoatCheck: React.FC = () => {
+
+    const [rows, setRows] = useState<any[]>([])
+    const [selectedClient, setSelectedClient] = useState<null | { id: string | number; name: string }>(null);
+    const [binNo, setBinNo] = useState<number | string>('');
+    const [submitting, setSubmitting] = useState(false);
+    const [updatingId, setUpdatingId] = useState<number | null>(null);
+
+    const formatTime = (iso?: string | null) => {
+        if (!iso) return ''
+        try {
+            const d = new Date(iso)
+            return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+        } catch (e) {
+            return iso as any
+        }
+    }
+
+    const fetchRows = async () => {
+        try {
+            const resp = await fetch(`${config.API_BASE}/coat_check_records`)
+            const data = await resp.json()
+
+            // fetch clients to map names (single request)
+            const clientsResp = await fetch(`${config.API_BASE}/api/clients`)
+            const clientsList = await clientsResp.json()
+            const clientMap: { [k: number]: string } = {}
+            if (Array.isArray(clientsList)) {
+                clientsList.forEach((c: any) => { clientMap[c.client_id] = c.full_name })
+            }
+
+            const mapped = (data || []).map((r: any) => ({
+                id: r.check_id,
+                name: clientMap[r.client_id] || `Client #${r.client_id}`,
+                bin_no: r.bin_no,
+                date: r.date,
+                time_in: formatTime(r.time_in),
+                time_out: r.time_out ? formatTime(r.time_out) : '',
+                raw_time_in: r.time_in,
+                raw_time_out: r.time_out
+            }))
+
+            mapped.sort((a: any, b: any) => {
+                const ta = a.raw_time_in ? new Date(a.raw_time_in).getTime() : 0
+                const tb = b.raw_time_in ? new Date(b.raw_time_in).getTime() : 0
+                return tb - ta
+            })
+
+            setRows(mapped.slice(0, 10))
+        } catch (e) {
+            setRows([])
+        }
+    }
+
+    useEffect(() => {
+        fetchRows()
+    }, [])
+
     return (
-        <h1 className="page-title">Coat Check</h1>
+        <div className="coat-check-page">
+            <h1 className="page-title">Coat Check</h1>
+
+            <div className="number-of-clients-graph">
+                    <CoatCheckPanel />
+            </div>
+
+            <div className="coat-check-row">
+                <div className="coat-check-left">
+                    <div className="heading-text recent-label" style={{ marginTop: 20 }}>Recent Coat Check Records</div>
+
+                    <div className="recent-table-wrapper">
+                        <ResponsiveTable
+                            columns={[
+                                { key: 'name', label: 'Name' },
+                                { key: 'bin_no', label: 'Bin No' },
+                                { key: 'date', label: 'Date' },
+                                { key: 'time_in', label: 'Time In' },
+                                { key: 'time_out', label: 'Time Out' },
+                            ]}
+                            rows={rows}
+                            noDataText={<RecordText>No recent data</RecordText> as any}
+                            renderCell={(row, key) => {
+                                if (key === 'name') return <RecordText>{row.name}</RecordText>
+                                if (key === 'bin_no') return <RecordText>{row.bin_no}</RecordText>
+                                if (key === 'date') return <RecordText>{row.date}</RecordText>
+                                if (key === 'time_in') return <RecordText>{row.time_in}</RecordText>
+                                if (key === 'time_out') {
+                                    // if no time_out yet, show the time-out button
+                                    if (!row.raw_time_out) {
+                                        return (
+                                            <ActionButton
+                                                onClick={async () => {
+                                                    if (!row.id) return
+                                                    setUpdatingId(row.id)
+                                                    try {
+                                                        const now = new Date()
+                                                        const res = await fetch(`${config.API_BASE}/coat_check_records/${row.id}`, {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ time_out: now.toISOString() })
+                                                        })
+                                                        if (!res.ok) {
+                                                            const err = await res.json().catch(() => ({}))
+                                                            console.error('Update coat check time_out error response:', err)
+                                                            alert('Failed to set time out: ' + (err.error || err.message || res.statusText))
+                                                        } else {
+                                                            await fetchRows()
+                                                            // notify other components to refresh their stats
+                                                            try { window.dispatchEvent(new Event('dataUpdated')) } catch (e) {}
+                                                        }
+                                                    } catch (e) {
+                                                        alert('Failed to set time out')
+                                                    } finally {
+                                                        setUpdatingId(null)
+                                                    }
+                                                }}
+                                                className="coatcheck-timeout"
+                                            >
+                                                {updatingId === row.id ? 'Saving...' : 'time out'}
+                                            </ActionButton>
+                                        )
+                                    }
+                                    return <RecordText>{row.time_out}</RecordText>
+                                }
+                                return <RecordText>{row[key]}</RecordText>
+                            }}
+                        />
+                    </div>
+                </div>
+
+                <div className="coat-check-right">
+                    <div className="heading-text recent-label">Enter Record</div>
+                    <CardFrame className="client-form-card">
+                        <div className="client-form-inner">
+                            
+
+                            <label className="cf-label">Full name <span className="cf-required">*</span></label>
+                            <div>
+                                <SearchBar variant="form" inputClassName="cf-input" placeholder="Search clients" onSelect={(item) => setSelectedClient({ id: item.id, name: item.name })} />
+                            </div>
+
+                            <label className="cf-label">Bin no</label>
+                            <input
+                                className="cf-input"
+                                type="number"
+                                min={1}
+                                max={100}
+                                placeholder="Bin no"
+                                value={binNo}
+                                onChange={(e) => setBinNo(e.target.value)}
+                            />
+
+                            <div style={{ height: 8 }} />
+                            <ActionButton
+                                onClick={async () => {
+                                    if (!selectedClient || !selectedClient.id) {
+                                        alert('Please select a client from the search results')
+                                        return
+                                    }
+                                    if (!binNo) {
+                                        alert('Please enter bin number')
+                                        return
+                                    }
+
+                                    setSubmitting(true)
+                                    try {
+                                        const now = new Date()
+                                        const payload = {
+                                            client_id: Number(selectedClient.id),
+                                            bin_no: Number(binNo),
+                                            time_in: now.toISOString(),
+                                            date: now.toISOString().slice(0,10)
+                                        }
+                                        const res = await fetch(`${config.API_BASE}/coat_check_records`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(payload)
+                                        })
+                                                        if (!res.ok) {
+                                                            const err = await res.json().catch(() => ({}))
+                                                            console.error('Create coat check record error response:', err)
+                                                            alert('Failed to create record: ' + (err.error || err.message || res.statusText))
+                                        } else {
+                                            // refresh rows
+                                            await fetchRows()
+                                                            // notify other components (totals, panels) to refresh
+                                                            try { window.dispatchEvent(new Event('dataUpdated')) } catch (e) {}
+                                            // reset inputs
+                                            setSelectedClient(null)
+                                            setBinNo('')
+                                        }
+                                    } catch (e) {
+                                        alert('Failed to create record')
+                                    } finally {
+                                        setSubmitting(false)
+                                    }
+                                }}
+                                className="cf-submit coatcheck-submit"
+                            >
+                                {submitting ? 'Saving...' : 'Submit'}
+                            </ActionButton>
+                        </div>
+                    </CardFrame>
+                </div>
+            </div>
+        </div>
+        
     )
 }
 

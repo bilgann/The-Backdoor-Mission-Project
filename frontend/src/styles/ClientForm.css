@@ -109,6 +109,19 @@ select.cf-input option {
   cursor: pointer;
 }
 
+/* Placeholder text for the custom gender button */
+.cf-select-placeholder {
+  color: var(--sds-color-text-default-tertiary);
+  font-family: "Satoshi Variable";
+  font-size: var(--sds-typography-body-size-medium);
+  font-style: normal;
+  font-weight: var(--sds-typography-body-font-weight-regular);
+  line-height: 140%;
+}
+
+/* required asterisk on labels */
+.cf-required { color: #d32; font-weight: 600; margin-left: 6px; }
+
 .cf-select-caret { margin-left: 8px; color: #5B5B5B }
 
 .cf-select-menu {
@@ -140,3 +153,20 @@ select.cf-input option {
   background: #DDFFC2; /* requested hover color */
   outline: none;
 }
+
+/* Suggestions panel for duplicate detection */
+.cf-suggestions {
+  margin-top: 8px;
+  border: 1px solid #EFEFEF;
+  border-radius: 8px;
+  background: #FFF;
+  padding: 8px;
+}
+.cf-suggestions-title { font-weight: 600; margin-bottom: 6px; }
+.cf-suggestions ul { list-style: none; padding: 0; margin: 0; }
+.cf-suggestion-row { display: flex; align-items: flex-start; padding: 6px 8px; border-radius: 6px; }
+.cf-suggestion-row + .cf-suggestion-row { margin-top: 6px; }
+.cf-suggestion-main { display:flex; flex-direction:column }
+.cf-suggestion-full { font-family: "Satoshi Variable"; font-size: 14px; color: #2B4118 }
+.cf-suggestion-nick { color: var(--sds-color-text-default-tertiary); font-weight: 400; margin-left: 6px }
+.cf-suggestion-id { color: var(--sds-color-text-default-tertiary); font-size: 12px; margin-top: 4px }

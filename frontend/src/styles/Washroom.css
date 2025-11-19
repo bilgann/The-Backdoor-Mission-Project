@@ -1,0 +1,234 @@
+/* (Coat Check specific table/chart overrides) */
+.washroom-left .recent-table-wrapper {
+	width: 100% !important;
+	max-width: 100% !important;
+	overflow: visible;
+}
+
+/* Match header background color requested for coat check table */
+.washroom-left .recent-table thead th {
+	background: #A4E5FF !important;
+	color: #454545 !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 12px !important;
+	font-style: normal !important;
+	font-weight: 500 !important;
+	line-height: 130% !important; /* 15.6px */
+}
+
+/* Submit and time-out buttons styling */
+.washroom-submit {
+	border-radius: 20px !important;
+	background: #42C2F6 !important;
+	color: #fdfdfd !important;
+	border: none !important;
+	padding: 8px 12px !important;
+}
+
+.washroom-timeout {
+	border-radius: 20px !important;
+	background: #42C2F6 !important;
+	color: #fdfdfd !important;
+	border: none !important;
+	padding: 6px 10px !important;
+}
+
+/* Make recent coat check table rows a bit more compact to match Recent Clients */
+.washroom-left .recent-table tbody td {
+	/* match Recent Clients table cell sizing for exact visual parity */
+	min-height: 40px !important;
+	padding: 8px 12px !important;
+}
+
+/* Ensure circular service indicators (if any) remain aligned */
+.washroom-left .service-cell { align-items: center }
+
+/* Force washroom chart line color in case stroke prop is not applied */
+.washroom-left .chart-line {
+	stroke: #42C2F6 !important;
+}
+
+/* Explicit column width hints so all 5 columns show and match clients layout */
+.washroom-left .recent-table th:nth-child(1), .washroom-left .recent-table td:nth-child(1) { width: 46%; }
+.washroom-left .recent-table th:nth-child(2), .washroom-left .recent-table td:nth-child(2) { width: 12%; }
+.washroom-left .recent-table th:nth-child(3), .washroom-left .recent-table td:nth-child(3) { width: 14%; }
+.washroom-left .recent-table th:nth-child(4), .washroom-left .recent-table td:nth-child(4) { width: 14%; }
+.washroom-left .recent-table th:nth-child(5), .washroom-left .recent-table td:nth-child(5) { width: 14%; }
+
+/* Ensure SearchBar used inside the CardFrame form stretches to full width like cf-input */
+.client-form-card .searchbar-container { max-width: 100% !important; width: 100% !important; }
+.client-form-card .searchbar-input.form .searchbar-text { width: 100% !important; }
+.client-form-card .cf-input { width: 100% !important; }
+
+/* Make the select look like the full-name input (border, padding, rounded corners) */
+select.cf-input {
+	border: 1px solid #E5E5E5 !important;
+	background: #fff !important;
+	border-radius: 8px !important;
+	-webkit-appearance: none !important;
+	-moz-appearance: none !important;
+	appearance: none !important;
+	padding: 8px 36px 8px 12px !important; /* leave room for caret */
+	color: #5B5B5B !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 16px !important;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><path fill='%235B5B5B' d='M7 10l5 5 5-5z'/></svg>");
+	background-repeat: no-repeat !important;
+	background-position: right 12px center !important;
+}
+
+select.cf-input:focus, select.cf-input:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+	border-color: #E5E5E5 !important;
+}
+
+/* place the card 20px below the Enter Record label */
+.washroom-right .client-form-card { margin-top: 20px; }
+
+/* Layout: place left and right columns side-by-side like Clients page */
+.washroom-row {
+	display: flex;
+	gap: 24px;
+	align-items: flex-start;
+}
+
+.washroom-left {
+	flex: 1 1 65%;
+	display: flex;
+	flex-direction: column;
+}
+
+.washroom-right {
+	flex: 1 1 35%;
+	display: flex;
+	flex-direction: column;
+}
+
+@media (max-width: 900px) {
+	.washroom-row { flex-direction: column }
+}
+
+/* Center the time-out button inside its cell without changing text flow */
+.washroom-left .recent-table tbody td:nth-child(5) {
+	text-align: center !important;
+	vertical-align: middle !important;
+}
+
+.washroom-left .recent-table tbody td:nth-child(5) > .washroom-timeout {
+	display: inline-block !important;
+	margin: 0 !important;
+	vertical-align: middle !important;
+}
+
+/* Timers area */
+.washroom-timers {
+	margin-top: 15px;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+.washroom-timer-card {
+	/* make the card a vertical stack: heading above the row */
+	padding: 15px;
+	min-height: 48px;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	border-radius: 8px;
+	border: 1px solid #5B5B5B;
+	background: #fff;
+	box-sizing: border-box;
+	width: auto;
+	align-self: flex-start;
+}
+
+.washroom-timer-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 15px;
+}
+
+.washroom-timer-heading {
+	color: #000;
+	font-family: "Satoshi Variable";
+	font-size: 13px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 120%;
+	letter-spacing: -0.39px;
+	/* ensure 15px padding above and below the label */
+	padding: 15px 0;
+	margin: 0 0 6px 0;
+}
+
+.washroom-timer-label {
+	color: #5B5B5B;
+	font-family: "Satoshi Variable";
+	font-size: 12px;
+}
+
+.washroom-timer-time {
+	color: #000;
+	font-family: "Satoshi Variable";
+	font-size: 20px;
+	font-weight: 400;
+	line-height: 120%;
+	letter-spacing: -0.6px;
+}
+
+.washroom-timer-button {
+	background: #42C2F6 !important;
+	color: #000 !important;
+	border-radius: 20px !important;
+	padding: 6px 10px !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 11px !important;
+	font-weight: 400 !important;
+	line-height: 130% !important;
+	border: none !important;
+	box-shadow: none !important;
+	flex: 0 0 auto;
+}
+
+/* Remove focus/active outline/border/shadow for both timer and table timeout buttons */
+.washroom-timeout:focus,
+.washroom-timeout:active,
+.washroom-timeout:focus-visible,
+.washroom-timer-button:focus,
+.washroom-timer-button:active,
+.washroom-timer-button:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+	border: none !important;
+}
+
+/* ensure ~15px gap between the time text and the timeout button when they are siblings */
+.washroom-timer-time + .washroom-timer-button,
+.washroom-timer-button + .washroom-timer-time {
+	margin-left: 0; /* keep no extra sibling margin */
+}
+
+/* Prevent timer children from stretching -- keep tight 15px gap between time and button */
+.washroom-timer-time {
+	flex: 0 0 auto;
+}
+
+/* Remove focus/active outline for the timeout button only */
+.washroom-left .recent-table tbody td:nth-child(5) > .washroom-timeout:focus,
+.washroom-left .recent-table tbody td:nth-child(5) > .washroom-timeout:active,
+.washroom-left .recent-table tbody td:nth-child(5) > .washroom-timeout:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+	-webkit-box-shadow: none !important;
+	border: none !important;
+}
+
+/* hover color for the washroom type dropdown options */
+.washroom-right .cf-select-option:hover,
+.washroom-right .cf-select-option:focus {
+    background: #A9E6FF !important;
+}
+
+

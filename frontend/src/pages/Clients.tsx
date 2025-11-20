@@ -26,10 +26,45 @@ const Clients: React.FC = () => {
         // Backend endpoint: GET /api/clients/recent
         // If your backend differs, update the path or implement an endpoint that returns
         // an array of client records: { id, name, date, service }
+        const parseToTs = (d: any) => {
+            try {
+                if (!d) return 0
+                if (typeof d === 'number') return d
+                if (typeof d === 'string') {
+                    let s = d.trim()
+                    if (s.includes('T')) return new Date(s).getTime()
+                    if (/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:?\d{0,2}/.test(s)) {
+                        s = s.replace(/\s+/, 'T')
+                        return new Date(s).getTime() || 0
+                    }
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00`).getTime() || 0
+                    return new Date(s).getTime() || 0
+                }
+                return new Date(d).getTime() || 0
+            } catch (e) {
+                return 0
+            }
+        }
+
+        const sortRecentData = (arr: any[]) => {
+            if (!Array.isArray(arr)) return []
+            const copy = [...arr]
+            copy.sort((a: any, b: any) => {
+                const ta = parseToTs(a.date)
+                const tb = parseToTs(b.date)
+                const byDate = tb - ta
+                if (byDate !== 0) return byDate
+                const ida = Number(a.id || 0)
+                const idb = Number(b.id || 0)
+                return idb - ida
+            })
+            return copy
+        }
+
         const fetchRecent = () => {
             fetch(`${config.API_BASE}/api/clients/recent`)
                 .then((r) => r.json())
-                .then((data) => setRecent(data || []))
+                .then((data) => setRecent(sortRecentData(data || [])))
                 .catch(() => setRecent([]));
         }
 
@@ -95,6 +130,20 @@ const Clients: React.FC = () => {
                                         </div>
                                     )
                                 }
+
+                                if (key === 'date') {
+                                    // For Safe Sleep service, show date-only in the recent clients table
+                                    if (row.service === 'Safe Sleep') {
+                                        try {
+                                            const d = row.date ? new Date(row.date) : null
+                                            if (d && !isNaN(d.getTime())) {
+                                                return <RecordText>{d.toLocaleDateString('en-US')}</RecordText>
+                                            }
+                                        } catch (e) {}
+                                    }
+                                    return <RecordText>{row.date}</RecordText>
+                                }
+
                                 return <RecordText>{row[key]}</RecordText>
                             }}
                         />
@@ -106,10 +155,46 @@ const Clients: React.FC = () => {
                         <div className="heading-text recent-label">Create Client</div>
                         <div style={{ marginTop: 12 }}>
                             <ClientForm onSuccess={() => {
-                                // refresh recent clients list
+                                // refresh recent clients list and sort newest-first
                                 fetch(`${config.API_BASE}/api/clients/recent`)
                                 .then(r => r.json())
-                                .then(d => setRecent(d || []))
+                                .then(d => {
+                                    try {
+                                        const parseToTs = (d: any) => {
+                                            try {
+                                                if (!d) return 0
+                                                if (typeof d === 'number') return d
+                                                if (typeof d === 'string') {
+                                                    let s = d.trim()
+                                                    if (s.includes('T')) return new Date(s).getTime()
+                                                    if (/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:?\d{0,2}/.test(s)) {
+                                                        s = s.replace(/\s+/, 'T')
+                                                        return new Date(s).getTime() || 0
+                                                    }
+                                                    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00`).getTime() || 0
+                                                    return new Date(s).getTime() || 0
+                                                }
+                                                return new Date(d).getTime() || 0
+                                            } catch (e) {
+                                                return 0
+                                            }
+                                        }
+
+                                        const copy = Array.isArray(d) ? [...d] : []
+                                        copy.sort((a: any, b: any) => {
+                                            const ta = parseToTs(a.date)
+                                            const tb = parseToTs(b.date)
+                                            const byDate = tb - ta
+                                            if (byDate !== 0) return byDate
+                                            const ida = Number(a.id || 0)
+                                            const idb = Number(b.id || 0)
+                                            return idb - ida
+                                        })
+                                        setRecent(copy)
+                                    } catch (e) {
+                                        setRecent(d || [])
+                                    }
+                                })
                                 .catch(() => {});
                             }} />
                         </div>

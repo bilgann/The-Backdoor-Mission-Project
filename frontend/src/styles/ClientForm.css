@@ -77,12 +77,12 @@ select.cf-input option {
 
 .cf-submit {
   margin: 0; /* no extra gap at bottom */
-  background: #95F492;
+  background: #F24B8E;
   border: none;
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
-  color: #5B5B5B;
+  color: #ffffff;
   font-family: "Satoshi Variable";
   font-size: var(--sds-typography-body-size-medium);
   font-style: normal;

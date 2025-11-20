@@ -211,3 +211,27 @@
 @media (max-width: 480px) {
   .clients-page { padding-right: 10px }
 }
+
+/* Clinic page specific tweaks */
+.clinic-page { display: flex; flex-direction: column; min-height: calc(100vh - 100px); padding-bottom: 32px; }
+.clinic-row { display: flex; gap: 24px; align-items: stretch; min-height: calc(100vh - 320px); }
+.clinic-left { flex: 1 1 65%; display: flex; flex-direction: column; }
+.clinic-right { flex: 1 1 35%; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
+
+/* place the card 20px below the Enter Record label for Clinic page */
+.clinic-right .client-form-card { margin-top: 20px; }
+
+/* Make recent table use full width in clinic left column */
+.clinic-left .recent-table-wrapper { width: 100% !important; max-width: 100% !important; overflow: visible; }
+
+/* Clinic-specific header color for recent records table */
+.clinic-page .recent-table thead th { background: #FDB9D4; }
+
+/* Submit button color for clinic form */
+.clinic-right .cf-submit { background: #95F492; border: 1px solid #95F492; color: #fff; }
+.clinic-right .cf-submit:hover { filter: brightness(0.95); }
+
+/* Clients page: override submit button in Create Client form */
+.clients-right .cf-submit { background: #95F492; border: 1px solid #5B5B5B; color: #2B4118; }
+.clients-right .cf-submit:hover { filter: brightness(0.95); }
+

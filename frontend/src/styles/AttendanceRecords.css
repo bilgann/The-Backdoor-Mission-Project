@@ -1,0 +1,22 @@
+.attendance-card{padding:12px}
+.attendance-inner{display:flex;gap:16px;align-items:flex-start}
+.attendance-left{width:280px;min-width:200px}
+.attendance-right{flex:1}
+.records-table-wrapper{overflow:auto}
+.records-table{width:100%;border-collapse:collapse;font-size:13px}
+.records-table thead th{text-align:left;padding:8px 12px;border-bottom:1px solid #e6e6e6;color:#333}
+.records-table tbody td{padding:8px 12px;border-bottom:1px solid #f4f4f4}
+.day-row .day-header{background:transparent;padding:8px 12px;font-weight:700;color:#222}
+.day-header{display:flex;align-items:center;gap:8px}
+.day-color{width:12px;height:12px;border-radius:2px;display:inline-block}
+.name-cell{display:flex;align-items:center;gap:8px}
+.name-color{width:12px;height:12px;border-radius:2px;display:inline-block}
+.empty-row td{background:transparent}
+
+/* make the donut area centered */
+.recharts-wrapper{display:block}
+
+@media (max-width: 900px){
+  .attendance-inner{flex-direction:column}
+  .attendance-left{width:100%}
+}

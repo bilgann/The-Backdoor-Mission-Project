@@ -1,0 +1,86 @@
+/* Safe Sleep specific styles */
+
+.safe-sleep-page .recent-table thead th {
+    background: #8B9AFF !important;
+    color: #ffffff !important;
+    font-family: "Satoshi Variable" !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 130% !important;
+}
+
+.safe-sleep-submit {
+    border-radius: 20px !important;
+    background: #5668E0 !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 8px 12px !important;
+}
+
+/* place the card 20px below the Enter Record label for Safe Sleep page */
+.safe-sleep-right .client-form-card { margin-top: 20px; }
+
+.safe-sleep-occupied {
+    border-radius: 20px !important;
+    border: none !important;
+    padding: 6px 10px !important;
+    min-width: 56px;
+    color: #fdfdfd !important;
+    font-family: "Satoshi Variable" !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    line-height: 130% !important;
+}
+
+.safe-sleep-occupied.occupied-yes {
+    background: #7789FF !important;
+}
+
+.safe-sleep-occupied.occupied-no {
+    background: #0A197F !important;
+}
+
+.safe-sleep-page .recent-table tbody td:nth-child(4) {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.safe-sleep-page .recent-table tbody td:nth-child(4) > .safe-sleep-occupied,
+.safe-sleep-page .recent-table tbody td:nth-child(3) > .safe-sleep-occupied {
+    display: inline-block !important;
+    margin: 0 !important;
+    vertical-align: middle !important;
+}
+
+.safe-sleep-occupied:focus, .safe-sleep-occupied:active, .safe-sleep-occupied:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* column width hints */
+.safe-sleep-page .recent-table th:nth-child(1), .safe-sleep-page .recent-table td:nth-child(1) { width: 36%; }
+.safe-sleep-page .recent-table th:nth-child(2), .safe-sleep-page .recent-table td:nth-child(2) { width: 18%; }
+.safe-sleep-page .recent-table th:nth-child(3), .safe-sleep-page .recent-table td:nth-child(3) { width: 30%; }
+.safe-sleep-page .recent-table th:nth-child(4), .safe-sleep-page .recent-table td:nth-child(4) { width: 16%; }
+.safe-sleep-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.safe-sleep-left {
+    flex: 1 1 65%;
+    min-width: 420px;
+}
+
+.safe-sleep-right {
+    flex: 0 0 34%;
+    max-width: 420px;
+}
+
+/* Column widths: bed_no small, name large, date small, occupied small */
+.safe-sleep-page .recent-table th:nth-child(1), .safe-sleep-page .recent-table td:nth-child(1) { width: 8%; }
+.safe-sleep-page .recent-table th:nth-child(2), .safe-sleep-page .recent-table td:nth-child(2) { width: 54%; }
+.safe-sleep-page .recent-table th:nth-child(3), .safe-sleep-page .recent-table td:nth-child(3) { width: 22%; }
+.safe-sleep-page .recent-table th:nth-child(4), .safe-sleep-page .recent-table td:nth-child(4) { width: 16%; }

@@ -2,7 +2,7 @@ from flask import Flask
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from marshmallow import Schema, fields, validate, validates, ValidationError
+from marshmallow import Schema, fields, validate, validates, ValidationError, EXCLUDE
 from datetime import date
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import func, text
@@ -163,9 +163,13 @@ class SafeSleepRecord(db.Model):
 class Activity(db.Model):
     __tablename__ = "activity_records"
     activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, nullable=False)
     activity_name = db.Column(db.String(255), nullable=False)
     date = db.Column(db.Date, nullable=False)
+    # optional start/end times for calendar placement
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    # attendance count for the event
+    attendance = db.Column(db.Integer, nullable=False, default=0)
 
 class ClientActivity(db.Model):
     __tablename__ = "client_activity"
@@ -300,10 +304,15 @@ class SafeSleepSchema(Schema):
             raise ValidationError('bed_no must be between 1 and 20')
 
 class ActivitySchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     activity_id = fields.Int(dump_only=True)
-    client_id = fields.Int(required=True)
     activity_name = fields.Str(required=True, validate=validate.Length(min=1))
     date = fields.Date(required=True)
+    start_time = fields.DateTime(required=False, allow_none=True)
+    end_time = fields.DateTime(required=False, allow_none=True)
+    attendance = fields.Int(required=False, load_default=0)
+    # color is a frontend-only UI preference and not stored server-side
 
 class ClientActivitySchema(Schema):
     id = fields.Int(dump_only=True)
@@ -653,7 +662,18 @@ def create_activity():
         data = ActivitySchema().load(payload)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
+    # validate start/end times when provided
+    if data.get('start_time') is not None and data.get('end_time') is not None:
+        try:
+            if data['end_time'] <= data['start_time']:
+                return jsonify({"message": "end_time must be after start_time"}), 400
+        except Exception:
+            return jsonify({"message": "Invalid start_time/end_time values"}), 400
+
+    # defensive: ensure frontend-only UI fields don't crash model construction
+    data.pop('color', None)
+    # defensive: ensure frontend-only UI fields don't crash model construction
+    data.pop('color', None)
     activity = Activity(**data)
     try:
         db.session.add(activity)
@@ -1023,6 +1043,21 @@ def get_activity(activity_id):
     data = ActivitySchema().dump(activity)
     return jsonify(data), 200
 
+# Compatibility aliases: some clients request `/activity_records`.
+@app.route("/activity_records", methods=["GET"])
+def get_activity_records_compat():
+    return get_activities()
+
+
+@app.route("/activity_records/<int:activity_id>", methods=["GET"])
+def get_activity_record_compat(activity_id):
+    return get_activity(activity_id)
+
+
+@app.route("/activity_records/<int:activity_id>", methods=["DELETE"])
+def delete_activity_record_compat(activity_id):
+    return delete_activity(activity_id)
+
 # get all client activities & filter by client_id, activity_id, and date
 @app.route("/client_activity", methods=["GET"])
 def get_client_activity():
@@ -1222,7 +1257,14 @@ def update_activity(activity_id):
         data = ActivitySchema().load(payload, partial=True)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
+    # validate start/end time relationship when both present
+    if 'start_time' in data and 'end_time' in data:
+        try:
+            if data['end_time'] <= data['start_time']:
+                return jsonify({"message": "end_time must be after start_time"}), 400
+        except Exception:
+            return jsonify({"message": "Invalid start_time/end_time values"}), 400
+
     for key, value in data.items():
         setattr(activity, key, value)
     try:
@@ -1282,7 +1324,6 @@ def delete_client(client_id):
         SafeSleepRecord.query.filter_by(client_id=client_id).delete(synchronize_session=False)
         # ClientActivity and Activity may reference client; remove them too.
         ClientActivity.query.filter_by(client_id=client_id).delete(synchronize_session=False)
-        Activity.query.filter_by(client_id=client_id).delete(synchronize_session=False)
 
         # Finally delete the client row
         db.session.delete(client)
@@ -2371,7 +2412,6 @@ class SafeSleepRecord(db.Model):
 class Activity(db.Model):
     __tablename__ = "activity_records"
     activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, nullable=False)
     activity_name = db.Column(db.String(255), nullable=False)
     date = db.Column(db.Date, nullable=False)
 
@@ -2783,7 +2823,14 @@ def create_activity():
         data = ActivitySchema().load(payload)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
+    # validate start/end times when provided
+    if data.get('start_time') is not None and data.get('end_time') is not None:
+        try:
+            if data['end_time'] <= data['start_time']:
+                return jsonify({"message": "end_time must be after start_time"}), 400
+        except Exception:
+            return jsonify({"message": "Invalid start_time/end_time values"}), 400
+
     activity = Activity(**data)
     try:
         db.session.add(activity)
@@ -3310,7 +3357,14 @@ def update_activity(activity_id):
         data = ActivitySchema().load(payload, partial=True)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
+    # validate start/end time relationship when both present
+    if 'start_time' in data and 'end_time' in data:
+        try:
+            if data['end_time'] <= data['start_time']:
+                return jsonify({"message": "end_time must be after start_time"}), 400
+        except Exception:
+            return jsonify({"message": "Invalid start_time/end_time values"}), 400
+
     for key, value in data.items():
         setattr(activity, key, value)
     try:

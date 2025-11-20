@@ -47,6 +47,14 @@ html {
   box-sizing: border-box;
 }
 
+/* Remove default focus outlines and focus box-shadows globally (visual preference) */
+*:focus, *:focus-visible,
+button:focus, button:active, input:focus, textarea:focus, a:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+
 body {
   font-family: "Satoshi Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;

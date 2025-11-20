@@ -60,6 +60,18 @@
 .client-form-card .searchbar-input.form .searchbar-text { width: 100% !important; }
 .client-form-card .cf-input { width: 100% !important; }
 
+/* Custom number input with SVG arrows */
+.number-input-with-arrows { position: relative; display: inline-block; width: 100%; }
+.number-input-with-arrows .cf-input { padding-right: 44px; box-sizing: border-box; }
+.number-input-with-arrows .num-arrows { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; }
+.number-input-with-arrows .num-arrow { background: transparent; border: none; padding: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.number-input-with-arrows .num-arrow svg { display: block; width: 12px; height: 7px; }
+
+/* hide native number input spinners across browsers */
+input.no-spinner::-webkit-outer-spin-button,
+input.no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.no-spinner { -moz-appearance: textfield; }
+
 /* place the card 20px below the Enter Record label */
 .coat-check-right .client-form-card { margin-top: 20px; }
 

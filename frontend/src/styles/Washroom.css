@@ -20,7 +20,7 @@
 .washroom-submit {
 	border-radius: 20px !important;
 	background: #42C2F6 !important;
-	color: #fdfdfd !important;
+	color: #ffffff !important;
 	border: none !important;
 	padding: 8px 12px !important;
 }
@@ -129,17 +129,17 @@ select.cf-input:focus, select.cf-input:focus-visible {
 	gap: 15px;
 }
 .washroom-timer-card {
-	/* make the card a vertical stack: heading above the row */
-	padding: 15px;
+	/* shrink-wrap the card to its contents and use equal padding on all sides */
+	padding: 12px !important;
 	min-height: 48px;
-	display: flex;
+	display: inline-flex; /* inline to allow width to fit content */
 	flex-direction: column;
 	align-items: stretch;
 	border-radius: 8px;
 	border: 1px solid #5B5B5B;
 	background: #fff;
 	box-sizing: border-box;
-	width: auto;
+	width: auto !important;
 	align-self: flex-start;
 }
 

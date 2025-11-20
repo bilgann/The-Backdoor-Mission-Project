@@ -1,0 +1,83 @@
+/* Sanctuary specific styles */
+
+.sanctuary-timeout {
+	border-radius: 20px !important;
+    background: #DBFE51 !important; /* updated to requested color */
+    color: #000 !important;
+    border: none !important;
+    padding: 6px 10px !important;
+}
+
+.sanctuary-serviced {
+	border-radius: 20px !important;
+	border: none !important;
+	padding: 6px 10px !important;
+	min-width: 56px;
+
+	/* Text style requested for both yes/no */
+	color: #000 !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 11px !important;
+	font-style: normal !important;
+	font-weight: 400 !important;
+	line-height: 130% !important; /* 14.3px */
+}
+
+.sanctuary-serviced.serviced-yes {
+	background: #6BFE51 !important; /* green */
+}
+
+.sanctuary-serviced.serviced-no {
+	background: #FE5151 !important; /* red */
+}
+
+/* center the serviced column like other timeout buttons */
+.sanctuary-page .recent-table tbody td:nth-child(6) {
+	text-align: center !important;
+	vertical-align: middle !important;
+}
+
+.sanctuary-page .recent-table tbody td:nth-child(6) > .sanctuary-serviced,
+.sanctuary-page .recent-table tbody td:nth-child(5) > .sanctuary-timeout {
+	display: inline-block !important;
+	margin: 0 !important;
+	vertical-align: middle !important;
+}
+
+/* disable focus outlines */
+.sanctuary-serviced:focus, .sanctuary-serviced:active, .sanctuary-serviced:focus-visible,
+.sanctuary-timeout:focus, .sanctuary-timeout:active, .sanctuary-timeout:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+	border: none !important;
+}
+
+/* Recent Sanctuary Records table header color */
+.sanctuary-page .recent-table thead th {
+	background: #DBF47A !important;
+	color: #454545 !important;
+	font-family: "Satoshi Variable" !important;
+	font-size: 12px !important;
+	font-weight: 500 !important;
+	line-height: 130% !important;
+}
+
+/* Submit button for Sanctuary Enter Record form */
+.sanctuary-submit {
+	border-radius: 20px !important;
+	background: #DBFE51 !important;
+	color: #ffffff !important;
+	border: none !important;
+	padding: 8px 12px !important;
+}
+
+/* place the card 20px below the Enter Record label for Sanctuary page */
+.sanctuary-right .client-form-card { margin-top: 20px; }
+
+/* Explicit column width hints so all 6 columns show and match app layout */
+.sanctuary-page .recent-table th:nth-child(1), .sanctuary-page .recent-table td:nth-child(1) { width: 32%; }
+.sanctuary-page .recent-table th:nth-child(2), .sanctuary-page .recent-table td:nth-child(2) { width: 20%; }
+.sanctuary-page .recent-table th:nth-child(3), .sanctuary-page .recent-table td:nth-child(3) { width: 14%; }
+.sanctuary-page .recent-table th:nth-child(4), .sanctuary-page .recent-table td:nth-child(4) { width: 12%; }
+.sanctuary-page .recent-table th:nth-child(5), .sanctuary-page .recent-table td:nth-child(5) { width: 12%; }
+.sanctuary-page .recent-table th:nth-child(6), .sanctuary-page .recent-table td:nth-child(6) { width: 10%; }

@@ -165,8 +165,10 @@ const TotalClients = () => {
                 onRangeChange={handleTimeRangeChange}
             />
 
-            {/* Line Chart Section (enlarged now that service breakdown is removed) */}
-            <Chart data={data.chart_data} height={260} />
+            {/* Line Chart Section (fills remaining space inside the card) */}
+            <div className="total-clients-chart-fill">
+                <Chart data={data.chart_data} height="100%" />
+            </div>
         </div>
     )
 }

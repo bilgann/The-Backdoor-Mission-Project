@@ -152,15 +152,44 @@ const CoatCheck: React.FC = () => {
                             </div>
 
                             <label className="cf-label">Bin no</label>
-                            <input
-                                className="cf-input"
-                                type="number"
-                                min={1}
-                                max={100}
-                                placeholder="Bin no"
-                                value={binNo}
-                                onChange={(e) => setBinNo(e.target.value)}
-                            />
+                            <div className="number-input-with-arrows">
+                                <input
+                                    className="cf-input no-spinner"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="Bin no"
+                                    value={binNo}
+                                    onChange={(e) => setBinNo(String(e.target.value).replace(/\D/g, ''))}
+                                />
+                                <div className="num-arrows">
+                                    <button
+                                        type="button"
+                                        className="num-arrow num-arrow-up"
+                                        onClick={() => {
+                                            const n = Number(binNo) || 0
+                                            if (n < 100) setBinNo(String(n + 1))
+                                        }}
+                                        aria-label="increase"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="8" viewBox="0 0 14 8" fill="none">
+                                            <path d="M13 6.75L6.75 0.5L0.5 6.75" stroke="#B3B3B3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="num-arrow num-arrow-down"
+                                        onClick={() => {
+                                            const n = Number(binNo) || 0
+                                            if (n > 1) setBinNo(String(n - 1))
+                                        }}
+                                        aria-label="decrease"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="8" viewBox="0 0 14 8" fill="none">
+                                            <path d="M13 0.5L6.75 6.75L0.5 0.500001" stroke="#B3B3B3" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
 
                             <div style={{ height: 8 }} />
                             <ActionButton

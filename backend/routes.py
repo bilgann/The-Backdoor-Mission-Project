@@ -235,6 +235,59 @@ def register_routes(app):
             return jsonify({"message": "Database error", "error": str(e)}), 500
         return jsonify({"message": "Activity created", "activity_id": activity.activity_id}), 201
 
+    @app.route('/activity', methods=['GET'])
+    def list_activities():
+        # optional query params: start_date, end_date (ISO yyyy-mm-dd)
+        start = request.args.get('start_date')
+        end = request.args.get('end_date')
+        q = Activity.query
+        try:
+            if start:
+                from datetime import datetime
+                sd = datetime.fromisoformat(start).date()
+                q = q.filter(Activity.date >= sd)
+            if end:
+                from datetime import datetime
+                ed = datetime.fromisoformat(end).date()
+                q = q.filter(Activity.date <= ed)
+        except Exception:
+            return jsonify({'message': 'Invalid date format for start_date/end_date, use YYYY-MM-DD'}), 400
+        items = q.all()
+        data = ActivitySchema(many=True).dump(items)
+        return jsonify(data), 200
+
+    @app.route('/activity/<int:activity_id>', methods=['PUT'])
+    def update_activity(activity_id):
+        payload = request.json or {}
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            return jsonify({'message': 'Activity not found'}), 404
+        try:
+            data = ActivitySchema(partial=True).load(payload)
+        except ValidationError as err:
+            return jsonify({'errors': err.messages}), 400
+        for k, v in data.items():
+            setattr(activity, k, v)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'message': 'Database error', 'error': str(e)}), 500
+        return jsonify({'message': 'Activity updated'}), 200
+
+    @app.route('/activity/<int:activity_id>', methods=['DELETE'])
+    def delete_activity(activity_id):
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            return jsonify({'message': 'Activity not found'}), 404
+        try:
+            db.session.delete(activity)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'message': 'Database error', 'error': str(e)}), 500
+        return jsonify({'message': 'Activity deleted'}), 200
+
     @app.route("/client_activity", methods=["POST"]) 
     def create_client_activity():
         payload = request.json

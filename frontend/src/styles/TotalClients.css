@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   width: 420px;
-  height: fit-content;
+  height: 460px; /* fixed card height so inner chart can stretch */
   padding: 20px 15px 8px 15px;
   align-items: flex-start;
   gap: 12px;
@@ -17,9 +17,17 @@
   margin: 0;
 }
 
-/* Match TotalVisitors frame height so bottoms align */
-.total-clients-container {
-  min-height: 460px;
+/* Chart area should fill the remaining vertical space */
+.total-clients-chart-fill {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+}
+
+/* Allow chart to visually extend toward left edge of card (compensate card padding) */
+.total-clients-chart-fill {
+  margin-left: -15px;
+  width: calc(100% + 15px);
 }
 
 /* Header Section: Title and Number */

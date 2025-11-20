@@ -2,7 +2,7 @@
 
 .chart-container {
   width: 100%;
-  height: auto; /* let the chart component control height via the prop */
+  height: 100%; /* allow parent to control height (supports flex-fill) */
   margin: 0;
   padding: 0;
   flex-shrink: 0;

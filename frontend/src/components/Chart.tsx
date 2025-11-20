@@ -15,7 +15,7 @@ interface ChartDataPoint {
 
 interface ChartProps {
     data: ChartDataPoint[]
-    height?: number
+    height?: number | string
     lineColor?: string
 }
 
@@ -27,10 +27,11 @@ const Chart = ({ data, height = 140, lineColor = '#95F492' }: ChartProps) => {
 
     return (
         <div className="chart-container">
-            <ResponsiveContainer width="100%" height={height}>
+            {/* height can be a number (px) or string (e.g. '100%') */}
+            <ResponsiveContainer width="100%" height={height as any}>
                 <LineChart 
                     data={data}
-                    margin={{ top: 5, right: 0, left: -12, bottom: 5 }}
+                    margin={{ top: 5, right: 0, left: -15, bottom: 5 }}
                 >
                     {/* Grid lines for better readability */}
                     <CartesianGrid strokeDasharray="3 3" stroke="#B5B5B5" />

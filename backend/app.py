@@ -77,6 +77,13 @@ def fix_schema_constraints():
                 db.session.execute(text("DROP INDEX IF EXISTS safe_sleep_records_client_id_idx;"))
             except Exception:
                 pass
+            # Ensure the `date` column for safe_sleep_records stores full timestamps
+            # (some older installs used DATE only which truncates time to midnight).
+            try:
+                db.session.execute(text("ALTER TABLE safe_sleep_records ALTER COLUMN date TYPE TIMESTAMP USING date::timestamp;"))
+            except Exception:
+                # if the column is already timestamp or the DB doesn't support the cast, ignore
+                pass
             # Ensure time_out columns are nullable across service tables. Some migrations
             # accidentally set them NOT NULL which prevents creating records without time_out.
             try:
@@ -148,7 +155,10 @@ class SafeSleepRecord(db.Model):
     __tablename__ = "safe_sleep_records"
     sleep_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    bed_no = db.Column(db.Integer, nullable=True)
+    is_occupied = db.Column(db.Boolean, nullable=False, default=False)
+    # store full datetime so we can record the time the bed was occupied
+    date = db.Column(db.DateTime, nullable=False)
 
 class Activity(db.Model):
     __tablename__ = "activity_records"
@@ -239,18 +249,55 @@ class SanctuarySchema(Schema):
 class ClinicSchema(Schema):
     clinic_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    # make date optional on the payload so clients in different timezones
+    # don't accidentally send a date that the server considers "in the future".
+    # We'll default/normalize on the server side in the route handler.
+    date = fields.Date(required=False)
     purpose_of_visit = fields.Str(required=False, validate=validate.Length(min=1))
 
     @validates('date')
     def validate_date(self, value, **kwargs):
-        if value > date.today():
-            raise ValidationError("date cannot be in the future")
+        # only validate if value provided; do not raise here for future dates
+        # because we'll clamp/normalize in the create handler to server's date.
+        return
 
 class SafeSleepSchema(Schema):
     sleep_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    bed_no = fields.Int(required=False, allow_none=True)
+    is_occupied = fields.Bool(required=False)
+    # date stores both date and time (ISO datetime)
+    date = fields.DateTime(required=True)
+
+    @validates('date')
+    def validate_date(self, value, **kwargs):
+        from datetime import datetime, timezone
+        # Accept both offset-aware and offset-naive datetimes.
+        # If `value` has tzinfo, compare using UTC-aware "now";
+        # otherwise compare using a naive now. This avoids
+        # "can't compare offset-naive and offset-aware datetimes".
+        tz = getattr(value, 'tzinfo', None)
+        if tz is None:
+            now = datetime.now()
+            cmp_value = value
+        else:
+            # make both value and now aware in UTC for comparison
+            now = datetime.now(timezone.utc)
+            try:
+                cmp_value = value.astimezone(timezone.utc)
+            except Exception:
+                # if astimezone fails for some reason, coerce tzinfo
+                cmp_value = value.replace(tzinfo=timezone.utc)
+
+        if cmp_value > now:
+            raise ValidationError('date cannot be in the future')
+
+    @validates('bed_no')
+    def validate_bed_no(self, value, **kwargs):
+        if value is None:
+            return
+        if value < 1 or value > 20:
+            raise ValidationError('bed_no must be between 1 and 20')
 
 class ActivitySchema(Schema):
     activity_id = fields.Int(dump_only=True)
@@ -475,10 +522,15 @@ def create_coat_check_record():
 
 @app.route("/sanctuary_records", methods=["POST"])
 def create_sanctuary_record():
-    payload = request.json
+    payload = request.json or {}
+    # defensive: remove any provided primary key before validation
+    payload.pop('sanctuary_id', None)
+    print("[DEBUG] create_sanctuary_record (second) payload:", payload)
+    print("[DEBUG] create_sanctuary_record payload:", payload)
 
     try:
         data = SanctuarySchema().load(payload)
+        print("[DEBUG] create_sanctuary_record marshalled data:", data)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
     
@@ -490,8 +542,17 @@ def create_sanctuary_record():
     client = Client.query.get(data["client_id"])
     if not client:
         return jsonify({"message": "Client not found"}), 404
-    
-    sanc = SanctuaryRecord(**data)
+    # Defensive: construct a clean payload dict to avoid passing sanctuary_id
+    clean = {
+        'client_id': data.get('client_id'),
+        'date': data.get('date'),
+        'time_in': data.get('time_in'),
+        'time_out': data.get('time_out'),
+        'purpose_of_visit': data.get('purpose_of_visit'),
+        'if_serviced': data.get('if_serviced', False)
+    }
+
+    sanc = SanctuaryRecord(**clean)
     try:
         db.session.add(sanc)
         db.session.commit()
@@ -510,9 +571,18 @@ def create_clinic_record():
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
     
-    # check if data is valid and not in the future
-    if data["date"] > date.today():
-        return jsonify({"message": "date cannot be in the future"}), 400
+    # normalize date: if not provided, default to server's current date.
+    # If the provided date is in the future (client timezone issues), clamp it
+    # to today's date to avoid rejecting valid client submissions.
+    if not data.get('date'):
+        data['date'] = date.today()
+    else:
+        try:
+            if data['date'] > date.today():
+                data['date'] = date.today()
+        except Exception:
+            # if comparison fails for any reason, default to today's date
+            data['date'] = date.today()
     
     # ensure client exists
     client = Client.query.get(data["client_id"])
@@ -542,7 +612,28 @@ def create_safe_sleep_record():
     client = Client.query.get(data["client_id"])
     if not client:
         return jsonify({"message": "Client not found"}), 404
+
+    # Prevent a client from occupying more than one bed at a time.
+    # If a client already has an active occupied bed, do not allow creating
+    # another occupied record for a different bed until the existing one is freed.
+    from sqlalchemy import and_
+    existing = SafeSleepRecord.query.filter_by(client_id=data["client_id"], is_occupied=True).first()
+    if existing:
+        # allow creating the same occupied record for the same bed_no only if it matches
+        # otherwise block to prevent multiple concurrent occupied beds
+        if not data.get("bed_no") or (existing.bed_no != data.get("bed_no")):
+            return jsonify({"message": "Client is already occupying a bed", "sleep_id": existing.sleep_id}), 400
     
+    # ensure bed_no/is_occupied defaults when not provided
+    if 'is_occupied' not in data:
+        # when frontend creates a safe-sleep record it implies occupancy
+        data['is_occupied'] = True if data.get('bed_no') else False
+
+    # ensure date/time is present (use current time if missing)
+    from datetime import datetime
+    if 'date' not in data or data['date'] is None:
+        data['date'] = datetime.now()
+
     safe_sleep = SafeSleepRecord(**data)
     try:
         db.session.add(safe_sleep)
@@ -552,6 +643,7 @@ def create_safe_sleep_record():
         return jsonify({"message": "Database error", "error": str(e)}), 500
     
     return jsonify({"message": "Safe sleep record created", "sleep_id": safe_sleep.sleep_id}), 201
+
 
 @app.route("/activity", methods=["POST"])
 def create_activity():
@@ -664,12 +756,28 @@ def api_recent_clients():
             # r may be a model instance
             rec_date = None
             rec_dt = None
+            # Prefer explicit time_in if available
             if has_time_in and hasattr(r, 'time_in') and r.time_in is not None:
                 rec_dt = r.time_in
             elif hasattr(r, 'date') and r.date is not None:
-                # convert date to a datetime at midnight for ordering
-                from datetime import datetime
-                rec_dt = datetime.combine(r.date, datetime.min.time())
+                # If the model's `date` is a datetime, use it directly. If it's a
+                # plain date, convert to an end-of-day datetime so date-only
+                # records (which have no time) sort after time-stamped records
+                # from the same day.
+                from datetime import datetime, time, date as _date, datetime as _dt
+                try:
+                    dval = r.date
+                    if isinstance(dval, _dt):
+                        rec_dt = dval
+                    elif isinstance(dval, _date):
+                        rec_dt = datetime.combine(dval, time.max)
+                    else:
+                        # fallback: try to coerce
+                        rec_dt = datetime.combine(dval, time.max)
+                except Exception:
+                    # Last-resort fallback
+                    from datetime import datetime as _dt2
+                    rec_dt = _dt2.now()
             records.append({'client_id': r.client_id, 'datetime': rec_dt, 'date': getattr(r, 'date', None), 'service': service_name})
 
     # Collect recent records from different service tables
@@ -869,6 +977,19 @@ def get_safe_sleep_records():
         query = query.filter_by(date=date_str)
     
     records = query.all()
+    # Ensure `date` values are datetimes for serialization: some historical
+    # records may have been stored as `date` objects. Marshmallow's
+    # DateTime field expects a datetime and will raise when given a plain
+    # date. Convert date -> datetime at midnight for safe serialization.
+    from datetime import datetime as _dt, time as _time, date as _date
+    for r in records:
+        try:
+            dval = getattr(r, 'date', None)
+            if isinstance(dval, _date) and not isinstance(dval, _dt):
+                r.date = _dt.combine(dval, _time.min)
+        except Exception:
+            # If conversion fails, leave as-is and let marshmallow handle/skip
+            pass
     data = SafeSleepSchema(many=True).dump(records)
     return jsonify(data), 200
 
@@ -1388,9 +1509,10 @@ def get_client_statistics():
             ClinicRecord.date <= end_date
         ).scalar() or 0
 
+        # use the datetime `date` field; compare only the date portion for range filters
         safe_sleep_count = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
-            SafeSleepRecord.date >= start_date,
-            SafeSleepRecord.date <= end_date
+            func.date(SafeSleepRecord.date) >= start_date,
+            func.date(SafeSleepRecord.date) <= end_date
         ).scalar() or 0
 
         # Count activity records (activities attended)
@@ -1780,6 +1902,377 @@ def get_washroom_statistics():
             'error': str(e)
         }), 500
 
+# ---------------- SANCTUARY STATISTICS ----------------
+@app.route('/api/sanctuary-statistics', methods=['GET'])
+def get_sanctuary_statistics():
+    """
+    Get sanctuary statistics based on time range (day, week, month, year)
+    Returns total sanctuary records
+    """
+    try:
+        from datetime import datetime, timedelta
+        time_range = request.args.get('range', 'day')  # day, week, month, year
+
+        # Calculate date range based on selection
+        today = datetime.now().date()
+
+        if time_range == 'day':
+            start_date = today
+            end_date = today
+        elif time_range == 'week':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif time_range == 'month':
+            start_date = today.replace(day=1)
+            # Get last day of month
+            if today.month == 12:
+                end_date = today.replace(day=31)
+            else:
+                end_date = (today.replace(month=today.month + 1, day=1) - timedelta(days=1))
+        elif time_range == 'year':
+            start_date = today.replace(month=1, day=1)
+            end_date = today.replace(month=12, day=31)
+        else:
+            start_date = today
+            end_date = today
+
+        # Get unique clients who used the washroom in the date range
+        client_ids = set()
+
+        sanctuary_clients = db.session.query(SanctuaryRecord.sanctuary_id).filter(
+            SanctuaryRecord.date >= start_date,
+            SanctuaryRecord.date <= end_date
+        ).distinct().all()
+        client_ids.update([c[0] for c in sanctuary_clients])
+
+        # Get breakdown by service as counts of entries (not distinct clients)
+        sanctuary_count = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(
+            SanctuaryRecord.date >= start_date,
+            SanctuaryRecord.date <= end_date
+        ).scalar() or 0
+
+        service_breakdown = {
+            'Sanctuary': int(sanctuary_count)
+        }
+
+        # total_clients here represents total washroom usages
+        total_clients = int(sanctuary_count)
+
+        # Get hourly/daily/monthly data for the chart
+        chart_data = []
+
+        if time_range == 'day':
+            # Group by hour (9am to 6pm) and count washroom entries only
+            for hour in range(9, 19):  # 9am to 6pm
+                hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
+                hour_end = hour_start + timedelta(hours=1)
+
+                hour_total = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(
+                    SanctuaryRecord.time_in >= hour_start,
+                    SanctuaryRecord.time_in < hour_end
+                ).scalar() or 0
+
+                # Format hour label (9am, 10am, 11am, 12pm, 1pm, 2pm, etc.)
+                if hour < 12:
+                    label = f"{hour}am"
+                elif hour == 12:
+                    label = "12pm"
+                else:
+                    label = f"{hour-12}pm"
+
+                chart_data.append({
+                    'label': label,
+                    'value': int(hour_total)
+                })
+
+        elif time_range == 'week':
+            # Group by day of week
+            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for i in range(7):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': days[i],
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'month':
+            # For month view return every day so the x-axis shows all days.
+            # Count all service entries per day (not unique clients) so the line reflects visitor counts.
+            days_in_month = (end_date - start_date).days + 1
+            for i in range(0, days_in_month):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
+
+                chart_data.append({
+                    'label': day_date.strftime('%d'),
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'year':
+            # Group by month
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            for month in range(1, 13):
+                month_start = today.replace(month=month, day=1)
+                if month == 12:
+                    month_end = today.replace(month=12, day=31)
+                else:
+                    month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
+
+                month_total = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date >= month_start, SanctuaryRecord.date <= month_end).scalar() or 0
+
+                chart_data.append({
+                    'label': months[month - 1],
+                    'value': int(month_total)
+                })
+
+        return jsonify({
+            'success': True,
+            'total_clients': total_clients,
+            'service_breakdown': service_breakdown,
+            'chart_data': chart_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching statistics',
+            'error': str(e)
+        }), 500
+
+
+# ---------------- CLINIC STATISTICS ----------------
+@app.route('/api/clinic-statistics', methods=['GET'])
+def get_clinic_statistics():
+    """
+    Get clinic statistics based on time range (day, week, month, year)
+    Returns total clinic records and chart data
+    """
+    try:
+        from datetime import datetime, timedelta
+        time_range = request.args.get('range', 'day')  # day, week, month, year
+
+        # Calculate date range based on selection
+        today = datetime.now().date()
+
+        if time_range == 'day':
+            start_date = today
+            end_date = today
+        elif time_range == 'week':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif time_range == 'month':
+            start_date = today.replace(day=1)
+            # Get last day of month
+            if today.month == 12:
+                end_date = today.replace(day=31)
+            else:
+                end_date = (today.replace(month=today.month + 1, day=1) - timedelta(days=1))
+        elif time_range == 'year':
+            start_date = today.replace(month=1, day=1)
+            end_date = today.replace(month=12, day=31)
+        else:
+            start_date = today
+            end_date = today
+
+        # Count clinic records in range
+        clinic_count = db.session.query(func.count(ClinicRecord.clinic_id)).filter(
+            ClinicRecord.date >= start_date,
+            ClinicRecord.date <= end_date
+        ).scalar() or 0
+
+        total_clients = int(clinic_count)
+
+        # Build chart data
+        chart_data = []
+        if time_range == 'day':
+            # No time component on ClinicRecord.date; return single value for today
+            chart_data.append({'label': 'Today', 'value': int(clinic_count)})
+
+        elif time_range == 'week':
+            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for i in range(7):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
+                chart_data.append({'label': days[i], 'value': int(day_total)})
+
+        elif time_range == 'month':
+            days_in_month = (end_date - start_date).days + 1
+            for i in range(0, days_in_month):
+                day_date = start_date + timedelta(days=i)
+                day_total = db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
+                chart_data.append({'label': day_date.strftime('%d'), 'value': int(day_total)})
+
+        elif time_range == 'year':
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            for month in range(1, 13):
+                month_start = today.replace(month=month, day=1)
+                if month == 12:
+                    month_end = today.replace(month=12, day=31)
+                else:
+                    month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
+
+                month_total = db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= month_start, ClinicRecord.date <= month_end).scalar() or 0
+                chart_data.append({'label': months[month - 1], 'value': int(month_total)})
+
+        return jsonify({'success': True, 'total_clients': total_clients, 'chart_data': chart_data}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Error fetching statistics', 'error': str(e)}), 500
+
+# ---------------- SAFE SLEEP STATISTICS ----------------
+@app.route('/api/safe-sleep-statistics', methods=['GET'])
+def get_safe_sleep_statistics():
+    """
+    Get safe sleep statistics based on time range (day, week, month, year)
+    Returns total safe sleep records
+    """
+    try:
+        from datetime import datetime, timedelta
+        time_range = request.args.get('range', 'day')  # day, week, month, year
+
+        # Calculate date range based on selection
+        today = datetime.now().date()
+
+        if time_range == 'day':
+            start_date = today
+            end_date = today
+        elif time_range == 'week':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif time_range == 'month':
+            start_date = today.replace(day=1)
+            # Get last day of month
+            if today.month == 12:
+                end_date = today.replace(day=31)
+            else:
+                end_date = (today.replace(month=today.month + 1, day=1) - timedelta(days=1))
+        elif time_range == 'year':
+            start_date = today.replace(month=1, day=1)
+            end_date = today.replace(month=12, day=31)
+        else:
+            start_date = today
+            end_date = today
+
+        # Convert date range endpoints to datetimes so comparisons against the
+        # `SafeSleepRecord.date` (which is a DateTime column) include the full
+        # span of each day. This prevents incorrect counts when comparing
+        # datetimes to date objects (which would otherwise be treated as
+        # midnight-only timestamps).
+        from datetime import datetime as _dt
+        start_dt = _dt.combine(start_date, _dt.min.time())
+        end_dt = _dt.combine(end_date, _dt.max.time())
+
+        # Get breakdown by service as counts of entries (not distinct clients)
+        safe_sleep_count = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
+            SafeSleepRecord.date >= start_dt,
+            SafeSleepRecord.date <= end_dt
+        ).scalar() or 0
+
+        service_breakdown = {
+            'Safe Sleep': int(safe_sleep_count)
+        }
+
+        # total_clients here represents total washroom usages
+        total_clients = int(safe_sleep_count)
+
+        # Get hourly/daily/monthly data for the chart
+        chart_data = []
+
+        if time_range == 'day':
+            # Group by each hour of the day (0-23) using the datetime `date` field
+            for hour in range(0, 24):
+                hour_start = datetime.combine(today, datetime.min.time()).replace(hour=hour)
+                hour_end = hour_start + timedelta(hours=1)
+                hour_total = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
+                    SafeSleepRecord.date >= hour_start,
+                    SafeSleepRecord.date < hour_end
+                ).scalar() or 0
+
+                # Format label: 12am, 1am, ..., 12pm, 1pm, ...
+                if hour == 0:
+                    label = '12am'
+                elif hour < 12:
+                    label = f"{hour}am"
+                elif hour == 12:
+                    label = '12pm'
+                else:
+                    label = f"{hour-12}pm"
+
+                chart_data.append({ 'label': label, 'value': int(hour_total) })
+
+        elif time_range == 'week':
+            # Group by day of week
+            days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for i in range(7):
+                day_date = start_date + timedelta(days=i)
+                day_start = datetime.combine(day_date, datetime.min.time())
+                day_end = datetime.combine(day_date, datetime.max.time())
+                day_total = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
+                    SafeSleepRecord.date >= day_start,
+                    SafeSleepRecord.date <= day_end
+                ).scalar() or 0
+
+                chart_data.append({
+                    'label': days[i],
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'month':
+            # For month view return every day so the x-axis shows all days.
+            # Count all service entries per day (not unique clients) so the line reflects visitor counts.
+            days_in_month = (end_date - start_date).days + 1
+            for i in range(0, days_in_month):
+                day_date = start_date + timedelta(days=i)
+                day_start = datetime.combine(day_date, datetime.min.time())
+                day_end = datetime.combine(day_date, datetime.max.time())
+                day_total = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
+                    SafeSleepRecord.date >= day_start,
+                    SafeSleepRecord.date <= day_end
+                ).scalar() or 0
+
+                chart_data.append({
+                    'label': day_date.strftime('%d'),
+                    'value': int(day_total)
+                })
+
+        elif time_range == 'year':
+            # Group by month
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            for month in range(1, 13):
+                month_start = today.replace(month=month, day=1)
+                if month == 12:
+                    month_end = today.replace(month=12, day=31)
+                else:
+                    month_end = (today.replace(month=month + 1, day=1) - timedelta(days=1))
+
+                month_start_dt = datetime.combine(month_start, datetime.min.time())
+                month_end_dt = datetime.combine(month_end, datetime.max.time())
+                month_total = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(
+                    SafeSleepRecord.date >= month_start_dt,
+                    SafeSleepRecord.date <= month_end_dt
+                ).scalar() or 0
+
+                chart_data.append({
+                    'label': months[month - 1],
+                    'value': int(month_total)
+                })
+
+        return jsonify({
+            'success': True,
+            'total_clients': total_clients,
+            'service_breakdown': service_breakdown,
+            'chart_data': chart_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching statistics',
+            'error': str(e)
+        }), 500
+
 # ---------------- AUTHENTICATION ----------------
 @app.route('/api/login', methods=['POST', 'OPTIONS'])
 def login():
@@ -1870,7 +2363,10 @@ class SafeSleepRecord(db.Model):
     __tablename__ = "safe_sleep_records"
     sleep_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    bed_no = db.Column(db.Integer, nullable=True)
+    is_occupied = db.Column(db.Boolean, nullable=False, default=False)
+    # store full datetime so we can record the time the bed was occupied
+    date = db.Column(db.DateTime, nullable=False)
 
 class Activity(db.Model):
     __tablename__ = "activity_records"
@@ -1971,7 +2467,22 @@ class ClinicSchema(Schema):
 class SafeSleepSchema(Schema):
     sleep_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    bed_no = fields.Int(required=False, allow_none=True)
+    is_occupied = fields.Bool(required=False)
+    date = fields.DateTime(required=True)
+
+    @validates('date')
+    def validate_date(self, value, **kwargs):
+        from datetime import datetime
+        if value > datetime.now():
+            raise ValidationError('date cannot be in the future')
+
+    @validates('bed_no')
+    def validate_bed_no(self, value, **kwargs):
+        if value is None:
+            return
+        if value < 1 or value > 20:
+            raise ValidationError('bed_no must be between 1 and 20')
 
 class ActivitySchema(Schema):
     activity_id = fields.Int(dump_only=True)
@@ -2162,10 +2673,13 @@ def create_coat_check_record():
 
 @app.route("/sanctuary_records", methods=["POST"])
 def create_sanctuary_record():
-    payload = request.json
+    payload = request.json or {}
+    # defensive: remove any provided primary key before validation
+    payload.pop('sanctuary_id', None)
 
     try:
         data = SanctuarySchema().load(payload)
+        print("[DEBUG] create_sanctuary_record (second) marshalled data:", data)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
     
@@ -2178,7 +2692,17 @@ def create_sanctuary_record():
     if not client:
         return jsonify({"message": "Client not found"}), 404
     
-    sanc = SanctuaryRecord(**data)
+    # Defensive: construct a clean payload dict to avoid passing sanctuary_id
+    clean = {
+        'client_id': data.get('client_id'),
+        'date': data.get('date'),
+        'time_in': data.get('time_in'),
+        'time_out': data.get('time_out'),
+        'purpose_of_visit': data.get('purpose_of_visit'),
+        'if_serviced': data.get('if_serviced', False)
+    }
+
+    sanc = SanctuaryRecord(**clean)
     try:
         db.session.add(sanc)
         db.session.commit()
@@ -2229,7 +2753,18 @@ def create_safe_sleep_record():
     client = Client.query.get(data["client_id"])
     if not client:
         return jsonify({"message": "Client not found"}), 404
-    
+    # ensure bed_no/is_occupied defaults when not provided
+    if 'is_occupied' not in data:
+        data['is_occupied'] = True if data.get('bed_no') else False
+
+    # ensure date/time present and valid
+    from datetime import datetime
+    if 'date' not in data or data['date'] is None:
+        data['date'] = datetime.now()
+    else:
+        if data['date'] > datetime.now():
+            return jsonify({"message": "date cannot be in the future"}), 400
+
     safe_sleep = SafeSleepRecord(**data)
     try:
         db.session.add(safe_sleep)

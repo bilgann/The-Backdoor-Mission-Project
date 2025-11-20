@@ -146,9 +146,13 @@ def register_routes(app):
 
     @app.route("/sanctuary_records", methods=["POST"]) 
     def create_sanctuary_record():
-        payload = request.json
+        payload = request.json or {}
+        # defensive: remove any provided primary key before validation
+        payload.pop('sanctuary_id', None)
+        print("[DEBUG routes] create_sanctuary_record payload:", payload)
         try:
             data = SanctuarySchema().load(payload)
+            print("[DEBUG routes] create_sanctuary_record marshalled data:", data)
         except ValidationError as err:
             return jsonify({"errors": err.messages}), 400
         if data.get("time_out") is not None and data["time_out"] <= data["time_in"]:
@@ -156,7 +160,17 @@ def register_routes(app):
         client = Client.query.get(data["client_id"])
         if not client:
             return jsonify({"message": "Client not found"}), 404
-        sanc = SanctuaryRecord(**data)
+        # Defensive: construct a clean payload dict to avoid passing sanctuary_id
+        clean = {
+            'client_id': data.get('client_id'),
+            'date': data.get('date'),
+            'time_in': data.get('time_in'),
+            'time_out': data.get('time_out'),
+            'purpose_of_visit': data.get('purpose_of_visit'),
+            'if_serviced': data.get('if_serviced', False)
+        }
+
+        sanc = SanctuaryRecord(**clean)
         try:
             db.session.add(sanc)
             db.session.commit()

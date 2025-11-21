@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import config from '../config'
 import '../styles/Activity.css'
 
-type Props = { onClose: ()=>void }
+type Props = { onClose: ()=>void, existingEvent?: any, onSaved?: () => void }
 
-const CreateEventModal: React.FC<Props> = ({ onClose }) => {
+const CreateEventModal: React.FC<Props> = ({ onClose, existingEvent, onSaved }) => {
   const [activityName, setActivityName] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0,10))
   const [startTime, setStartTime] = useState('13:00')
@@ -12,6 +12,30 @@ const CreateEventModal: React.FC<Props> = ({ onClose }) => {
   const [attendance, setAttendance] = useState(0)
   const colors = ['#C3E4FF','#C3FFD7','#FC8C37','#F6254F','#27608F','#FFED7A']
   const [color, setColor] = useState<string>(colors[0])
+
+  React.useEffect(()=>{
+    if(existingEvent){
+      const ev = existingEvent
+      console.debug('[CreateEventModal] mounting with existingEvent', ev)
+      setActivityName(ev.activity_name || ev.activityName || '')
+      if(ev.date) setDate(ev.date)
+      try{
+        if(ev.start_time){
+          const sd = new Date(ev.start_time)
+          const sh = String(sd.getHours()).padStart(2,'0')
+          const sm = String(sd.getMinutes()).padStart(2,'0')
+          setStartTime(`${sh}:${sm}`)
+        }
+        if(ev.end_time){
+          const ed = new Date(ev.end_time)
+          const eh = String(ed.getHours()).padStart(2,'0')
+          const em = String(ed.getMinutes()).padStart(2,'0')
+          setEndTime(`${eh}:${em}`)
+        }
+      }catch(e){}
+      if((ev as any).color) setColor((ev as any).color)
+    }
+  }, [existingEvent])
 
   async function submit(e: React.FormEvent){
     e.preventDefault()
@@ -22,22 +46,51 @@ const CreateEventModal: React.FC<Props> = ({ onClose }) => {
       end_time: `${date}T${endTime}:00`
     }
     try{
-      const res = await fetch(`${config.API_BASE}/activity`, {
-        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
-      })
+      // Validate: do not create an event with the exact same start and end time on the same day
+      try{
+        const chkRes = await fetch(`${config.API_BASE}/activity?start_date=${date}&end_date=${date}`)
+        if(chkRes.ok){
+          const existing = await chkRes.json()
+          const newStart = `${date}T${startTime}:00`
+          const newEnd = `${date}T${endTime}:00`
+          const dup = (existing || []).some((ev: any) => {
+            // some backends use start_time/end_time or startTime/endTime
+            const evStart = ev.start_time || ev.startTime || ''
+            const evEnd = ev.end_time || ev.endTime || ''
+            return evStart === newStart && evEnd === newEnd
+          })
+          if(dup){
+            alert('An event already exists at that exact start and end time on this date.')
+            return
+          }
+        }
+      }catch(err){ /* ignore validation failure and continue to allow server-side validation */ }
+      let res
+      const editId = (existingEvent && ((existingEvent.activity_id ?? existingEvent.activityId ?? existingEvent.id)))
+      if(editId){
+        // edit existing
+        console.debug('[CreateEventModal] submitting PUT for id', editId, payload)
+        res = await fetch(`${config.API_BASE}/activity/${editId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      } else {
+        console.debug('[CreateEventModal] submitting POST', payload)
+        res = await fetch(`${config.API_BASE}/activity`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      }
+      console.debug('[CreateEventModal] response status', res.status)
       if(res.ok){
         // read created id and store local color mapping before closing
         try{
-          const body = await res.json()
-          const id = body && (body.activity_id || body.activityId || body.id)
+          const body = await res.json().catch(()=>null)
+          console.debug('[CreateEventModal] response body', body)
+          const id = body && (body.activity_id || body.activityId || body.id) || (existingEvent && existingEvent.activity_id)
           if(id){
             const map = JSON.parse(localStorage.getItem('activityColors') || '{}')
             map[id] = color
             localStorage.setItem('activityColors', JSON.stringify(map))
           }
         }catch(e){
-          // ignore parsing errors
+          console.warn('[CreateEventModal] failed to parse response body', e)
         }
+        if(onSaved) onSaved()
         onClose()
       } else {
         const txt = await res.text()
@@ -54,7 +107,7 @@ const CreateEventModal: React.FC<Props> = ({ onClose }) => {
   return (
     <div className="ac-modal-overlay">
       <div className="ac-modal">
-        <h3>Create Event</h3>
+        <h3>{existingEvent ? 'Edit Event' : 'Create Event'}</h3>
         <form onSubmit={submit} className="ac-form">
           <label>Title
             <input value={activityName} onChange={e=>setActivityName(e.target.value)} required />
@@ -68,9 +121,6 @@ const CreateEventModal: React.FC<Props> = ({ onClose }) => {
           <label>End
             <input type="time" value={endTime} onChange={e=>setEndTime(e.target.value)} required />
           </label>
-          <label>Attendance
-            <input type="number" min={0} value={attendance} onChange={e=>setAttendance(Number(e.target.value))} style={{display:'none'}} />
-          </label>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             <div>
               <div style={{fontSize:13,marginBottom:6}}>Pick a color</div>
@@ -82,7 +132,7 @@ const CreateEventModal: React.FC<Props> = ({ onClose }) => {
             </div>
             <div className="ac-form-actions">
             <button type="button" className="ac-btn" onClick={onClose}>Cancel</button>
-            <button type="submit" className="ac-btn ac-btn-primary">Create</button>
+            <button type="submit" className="ac-btn ac-btn-primary">{existingEvent ? 'Save' : 'Create'}</button>
             </div>
           </div>
         </form>

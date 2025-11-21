@@ -116,10 +116,10 @@ const SearchBar: React.FC<{
               // prevent the effect from immediately re-fetching and reopening the dropdown
               justSelectedRef.current = true
               setTimeout(() => { justSelectedRef.current = false }, 350)
+              // Notify parent of selection. Do NOT call onChange here - calling onChange
+              // after onSelect caused consuming components to clear selected IDs.
               onSelect && onSelect(m)
               setOpen(false)
-              if (onChange) onChange(m.name)
-              else setQuery(m.name)
             }}>
               <div className="searchbar-item-main">
                 <div className="searchbar-item-name">

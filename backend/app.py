@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, fields, validate, validates, ValidationError, EXCLUDE
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import func, text
 import os
@@ -177,6 +177,10 @@ class ClientActivity(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
+    # optional satisfaction score 1-10
+    score = db.Column(db.Integer, nullable=True)
+    # optional satisfaction score 1-10
+    score = db.Column(db.Integer, nullable=True)
 
 # ---------------- SCHEMAS ----------------
 class ClientSchema(Schema):
@@ -319,6 +323,8 @@ class ClientActivitySchema(Schema):
     client_id = fields.Int(required=True)
     activity_id = fields.Int(required=True)
     date = fields.Date(required=True)
+    score = fields.Int(required=False, allow_none=True, validate=validate.Range(min=1, max=10))
+    score = fields.Int(required=False, allow_none=True, validate=validate.Range(min=1, max=10))
 
 # ---------------- ROUTES ----------------
 # testing
@@ -580,18 +586,17 @@ def create_clinic_record():
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
     
-    # normalize date: if not provided, default to server's current date.
-    # If the provided date is in the future (client timezone issues), clamp it
-    # to today's date to avoid rejecting valid client submissions.
+    # ensure date/time is present; use current server time if missing
+    from datetime import datetime
     if not data.get('date'):
-        data['date'] = date.today()
+        data['date'] = datetime.now()
     else:
         try:
-            if data['date'] > date.today():
-                data['date'] = date.today()
+            # if client submitted a future datetime (clock skew), clamp to now
+            if data['date'] > datetime.now():
+                data['date'] = datetime.now()
         except Exception:
-            # if comparison fails for any reason, default to today's date
-            data['date'] = date.today()
+            data['date'] = datetime.now()
     
     # ensure client exists
     client = Client.query.get(data["client_id"])
@@ -686,7 +691,10 @@ def create_activity():
 
 @app.route("/client_activity", methods=["POST"])
 def create_client_activity():
-    payload = request.json
+    payload = request.json or {}
+    # Defensive: remove any provided primary key so DB autoincrement can work
+    payload.pop('id', None)
+    print(f"[DEBUG] create_client_activity payload cleaned: keys={list(payload.keys())}")
 
     try:
         data = ClientActivitySchema().load(payload)
@@ -1063,6 +1071,8 @@ def delete_activity_record_compat(activity_id):
 def get_client_activity():
     client_id = request.args.get("client_id")
     activity_id = request.args.get("activity_id")
+    start = request.args.get('start_date')
+    end = request.args.get('end_date')
     query = ClientActivity.query
 
     if client_id:
@@ -1070,16 +1080,48 @@ def get_client_activity():
     if activity_id:
         query = query.filter_by(activity_id=activity_id)
 
+    try:
+        if start:
+            sd_dt = datetime.fromisoformat(start).replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(ClientActivity.date >= sd_dt)
+        if end:
+            ed_dt = datetime.fromisoformat(end).replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(ClientActivity.date <= ed_dt)
+    except Exception:
+        return jsonify({'message': 'Invalid date format for start_date/end_date, use YYYY-MM-DD'}), 400
+
     records = query.all()
-    data = ClientActivitySchema(many=True).dump(records)
-    return jsonify(data), 200
+    mapped = []
+    for r in records:
+        client = Client.query.get(r.client_id)
+        activity = Activity.query.get(r.activity_id)
+        mapped.append({
+            'id': r.id,
+            'client_id': r.client_id,
+            'client_name': client.full_name if client else None,
+            'activity_id': r.activity_id,
+            'activity_name': activity.activity_name if activity else None,
+            'date': r.date.isoformat() if r.date else None,
+            'score': getattr(r, 'score', None)
+        })
+    return jsonify(mapped), 200
 
 @app.route("/client_activity/<int:id>", methods=["GET"])
 def get_client_activity_record(id):
     record = ClientActivity.query.get(id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
-    data = ClientActivitySchema().dump(record)
+    client = Client.query.get(record.client_id)
+    activity = Activity.query.get(record.activity_id)
+    data = {
+        'id': record.id,
+        'client_id': record.client_id,
+        'client_name': client.full_name if client else None,
+        'activity_id': record.activity_id,
+        'activity_name': activity.activity_name if activity else None,
+        'date': record.date.isoformat() if record.date else None,
+        'score': getattr(record, 'score', None)
+    }
     return jsonify(data), 200
 
 
@@ -1579,24 +1621,35 @@ def get_client_statistics():
         chart_data = []
         
         if time_range == 'day':
-            # Group by hour (9am to 6pm) using the record's `date` to select today's entries
-            # This avoids mismatches when `time_in` may be stored with timezone information
-            # which can cause comparisons against naive datetimes to miss records.
-            records_today = CoatCheckRecord.query.filter(CoatCheckRecord.date == today).all()
-            # initialize buckets for hours 9..18
-            hour_buckets = {h: 0 for h in range(9, 19)}
-            for r in records_today:
-                ti = getattr(r, 'time_in', None)
-                if ti is None:
-                    continue
-                try:
-                    hr = ti.hour
-                except Exception:
-                    continue
-                if hr in hour_buckets:
-                    hour_buckets[hr] += 1
+            # include date-only services (Clinic, SafeSleep, Activity) into the current hour bucket
+            clinic_today = db.session.query(func.count(ClinicRecord.clinic_id)).filter(func.date(ClinicRecord.date) == today).scalar() or 0
+            safe_sleep_today = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == today).scalar() or 0
+            activity_today = db.session.query(func.count(Activity.activity_id)).filter(Activity.date == today).scalar() or 0
+
+            # determine which hour bucket to put date-only records into (clamp to displayed hours 9-18)
+            current_hour = datetime.now().hour
+            bucket_hour = min(max(current_hour, 9), 18)
 
             for hour in range(9, 19):
+                hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
+                hour_end = hour_start + timedelta(hours=1)
+                hour_total = 0
+
+                # count records with explicit time_in in this hour
+                hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in >= hour_start, WashroomRecord.time_in < hour_end).scalar() or 0
+                hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in >= hour_start, CoatCheckRecord.time_in < hour_end).scalar() or 0
+                hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.time_in >= hour_start, SanctuaryRecord.time_in < hour_end).scalar() or 0
+
+                # add date-only counts into the current hour bucket so they appear on the day chart
+                if hour == bucket_hour:
+                    hour_total += (clinic_today or 0) + (safe_sleep_today or 0) + (activity_today or 0)
+
+                    # also include any washroom/sanctuary/coatcheck rows where time_in is null but date == today
+                    hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in == None, WashroomRecord.date == today).scalar() or 0
+                    hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in == None, CoatCheckRecord.date == today).scalar() or 0
+                    hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.time_in == None, SanctuaryRecord.date == today).scalar() or 0
+
+                # Format hour label (9am, 10am, 11am, 12pm, 1pm, 2pm, etc.)
                 if hour < 12:
                     label = f"{hour}am"
                 elif hour == 12:
@@ -1606,7 +1659,7 @@ def get_client_statistics():
 
                 chart_data.append({
                     'label': label,
-                    'value': int(hour_buckets.get(hour, 0))
+                    'value': int(hour_total)
                 })
         
         elif time_range == 'week':
@@ -3163,6 +3216,8 @@ def get_activity(activity_id):
 def get_client_activity():
     client_id = request.args.get("client_id")
     activity_id = request.args.get("activity_id")
+    start = request.args.get('start_date')
+    end = request.args.get('end_date')
     query = ClientActivity.query
 
     if client_id:
@@ -3170,16 +3225,48 @@ def get_client_activity():
     if activity_id:
         query = query.filter_by(activity_id=activity_id)
 
+    try:
+        if start:
+            sd = datetime.fromisoformat(start).date()
+            query = query.filter(ClientActivity.date >= sd)
+        if end:
+            ed = datetime.fromisoformat(end).date()
+            query = query.filter(ClientActivity.date <= ed)
+    except Exception:
+        return jsonify({'message': 'Invalid date format for start_date/end_date, use YYYY-MM-DD'}), 400
+
     records = query.all()
-    data = ClientActivitySchema(many=True).dump(records)
-    return jsonify(data), 200
+    mapped = []
+    for r in records:
+        client = Client.query.get(r.client_id)
+        activity = Activity.query.get(r.activity_id)
+        mapped.append({
+            'id': r.id,
+            'client_id': r.client_id,
+            'client_name': client.full_name if client else None,
+            'activity_id': r.activity_id,
+            'activity_name': activity.activity_name if activity else None,
+            'date': r.date.isoformat() if r.date else None,
+            'score': getattr(r, 'score', None)
+        })
+    return jsonify(mapped), 200
 
 @app.route("/client_activity/<int:id>", methods=["GET"])
 def get_client_activity_record(id):
     record = ClientActivity.query.get(id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
-    data = ClientActivitySchema().dump(record)
+    client = Client.query.get(record.client_id)
+    activity = Activity.query.get(record.activity_id)
+    data = {
+        'id': record.id,
+        'client_id': record.client_id,
+        'client_name': client.full_name if client else None,
+        'activity_id': record.activity_id,
+        'activity_name': activity.activity_name if activity else None,
+        'date': record.date.isoformat() if record.date else None,
+        'score': getattr(record, 'score', None)
+    }
     return jsonify(data), 200
 
 

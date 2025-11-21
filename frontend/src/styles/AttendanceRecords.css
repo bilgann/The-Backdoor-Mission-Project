@@ -1,14 +1,54 @@
-.attendance-card{padding:12px}
-.attendance-inner{display:flex;gap:16px;align-items:flex-start}
-.attendance-left{width:280px;min-width:200px}
-.attendance-right{flex:1}
+.attendance-card{position:relative;z-index:6}
+.attendance-inner{display:flex;gap:16px;align-items:flex-start;position:relative}
+/* CSS variables for donut sizing and spacing for easy tuning */
+:root{
+  --attendance-donut-height: 220px; /* match Pie height */
+  --card-frame-padding-top: 24px; /* matches CardFrame.padding */
+  --attendance-gap: 30px; /* desired gap between donut bottom and table top */
+}
+
+/* Position the donut absolutely within the attendance area so it scrolls with the page. */
+.attendance-left{
+  width:280px;
+  min-width:200px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:var(--attendance-donut-height);
+  position:absolute; /* positioned relative to .attendance-inner so it scrolls with content */
+  left:50%;
+  top:0;
+  transform:translateX(-50%);
+  z-index:999; /* above other UI */
+  pointer-events:auto;
+}
+
+/* Remove extra gap between the donut and the records table by setting card margin to
+   donut height minus the card's top padding so the table content sits flush under donut. */
+.attendance-card{
+  margin-top: calc(var(--attendance-donut-height) + var(--attendance-gap) - var(--card-frame-padding-top));
+}
+.attendance-right{flex:1;min-width:0;overflow-x:hidden}
 .records-table-wrapper{overflow:auto}
 .records-table{width:100%;border-collapse:collapse;font-size:13px}
-.records-table thead th{text-align:left;padding:8px 12px;border-bottom:1px solid #e6e6e6;color:#333}
+.records-table thead th{
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e6e6e6;
+  color: #333;
+  background: transparent; /* removed colored header background as requested */
+}
+/* Colored header for compact/small variant of records table (used by EditAttendanceRecords) */
+.records-table.small thead th{
+  background: #FFC75E;
+}
 .records-table tbody td{padding:8px 12px;border-bottom:1px solid #f4f4f4}
-.day-row .day-header{background:transparent;padding:8px 12px;font-weight:700;color:#222}
-.day-header{display:flex;align-items:center;gap:8px}
-.day-color{width:12px;height:12px;border-radius:2px;display:inline-block}
+.day-row .day-header{background:transparent;padding-top:8px;padding-bottom:8px;padding-left:0;padding-right:12px;color:#222;text-align:left}
+/* Ensure no left padding from generic td rules overrides this */
+.records-table tbody td.day-header{padding-left:0 !important}
+.records-table .day-header{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;white-space:nowrap}
+.day-name{font-weight:700;display:inline-block;margin-right:4px}
+.day-color{width:12px;height:12px;border-radius:2px;display:inline-block;flex:0 0 auto;margin-left:0;vertical-align:middle}
 .name-cell{display:flex;align-items:center;gap:8px}
 .name-color{width:12px;height:12px;border-radius:2px;display:inline-block}
 .empty-row td{background:transparent}
@@ -16,7 +56,423 @@
 /* make the donut area centered */
 .recharts-wrapper{display:block}
 
+/* Scrollable table inside each day card: constrain height and hide scrollbar */
+.attendance-day-table{
+  /* allow the table area to fill available space inside a fixed-height card and scroll internally */
+  overflow-y: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.attendance-day-table::-webkit-scrollbar{display:none} /* Chrome/Safari/Opera */
+
+/* Add attendee button styling (matches requested design) */
+.add-attendee{
+  border-radius:20px;
+  background:#FFCA66;
+  color:#404040;
+  font-family:"Satoshi Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.2;
+  letter-spacing:-0.39px;
+  padding:6px 10px;
+  border:none;
+  cursor:pointer;
+}
+.add-attendee:disabled{opacity:0.6;cursor:default}
+
+/* Keep all day cards the same height so layout doesn't break */
+.card-frame.attendance-day-card{
+  /* Fixed, consistent height for all day cards so adding attendees won't change card size.
+     Use the CSS variable to make adjustments easy. */
+  --attendance-day-card-height: 360px;
+  height: var(--attendance-day-card-height);
+  min-height: var(--attendance-day-card-height);
+  max-height: var(--attendance-day-card-height);
+  overflow: hidden;
+  padding: 0; /* remove outer card-frame padding for day cards; inner content controls spacing */
+}
+
+/* Make cf-inputs inside day cards fit the right column */
+.card-frame.attendance-day-card .cf-input{
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 6px 8px !important;
+  box-sizing: border-box !important;
+  /* allow horizontal scrolling inside the input but hide scrollbar */
+  overflow-x: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.card-frame.attendance-day-card .cf-input::-webkit-scrollbar{display:none}
+
+/* Make the activity select show a down-arrow similar to other dropdowns */
+.card-frame.attendance-day-card select.cf-input{
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #FFFFFF !important; /* white background to match cards */
+  color: #222 !important;
+  font-family: "Satoshi Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+  font-size: 13px !important;
+  padding: 8px 40px 8px 10px !important; /* left padding and room for custom arrow */
+  border-radius: 10px !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 25' fill='none'><path d='M6.25 9.375L12.5 15.625L18.75 9.375' stroke='%234F311D' stroke-linecap='round' stroke-linejoin='round'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 14px 14px !important;
+  transition: box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease !important;
+}
+
+/* Remove default blue focus/hover rings for custom select button and carousel dots */
+.cf-select-button:focus,
+.cf-select-button:focus-visible,
+.cf-select-button:hover,
+.cf-select-button:active,
+.cf-select-button{
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+.cf-select-button::-moz-focus-inner{ border:0 !important }
+
+.carousel-dot:focus,
+.carousel-dot:focus-visible,
+.carousel-dot:hover,
+.carousel-dot:active,
+.carousel-dot{
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  border-color: inherit !important;
+}
+
+/* Ensure the search input looks like other dropdowns and has no visible scrollbar */
+.card-frame.attendance-day-card input.cf-input{
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.card-frame.attendance-day-card input.cf-input::-webkit-scrollbar{display:none}
+
+/* Table visual tweaks inside day cards */
+.card-frame.attendance-day-card .attendance-day-table{
+  border-radius: 20px; /* rounded corners for the table container */
+  border: 1px solid rgba(0,0,0,0.06);
+  /* make the attendee list scrollable inside the card while hiding scrollbar */
+  overflow-y: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.card-frame.attendance-day-card .attendance-day-table::-webkit-scrollbar{display:none}
+
+.card-frame.attendance-day-card .records-table{
+  border-collapse: separate; /* allow rounding on table */
+  border-radius: 20px;
+  width: 100%;
+  border-spacing: 0;
+}
+
+/* Reduce client column width to make table slightly smaller visually */
+.card-frame.attendance-day-card .records-table td:nth-child(2),
+.card-frame.attendance-day-card .records-table th:nth-child(2){
+  width: 110px;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add a subtle line above attendee cells */
+.card-frame.attendance-day-card .records-table tbody td{
+  border-top: 1px solid #EFECEA;
+}
+
+/* Style for the edit button placed on the card header */
+.edit-card-btn{
+  /* match Add button sizing but inverted colors */
+  border-radius:20px;
+  background:#000;
+  color:#ffffff;
+  font-family:"Satoshi Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.2;
+  letter-spacing:-0.39px;
+  padding:6px 10px;
+  border:none;
+  cursor:pointer;
+}
+
+/* Top action buttons shown when editing a day card */
+.top-save-btn,
+.top-cancel-btn{
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-save-btn{
+  background: #DEFFA8;
+  color: #1b1b1b;
+}
+
+.top-save-btn:hover{ filter:brightness(0.98) }
+
+.top-cancel-btn{
+  background: #FFC2C2;
+  color: #FF5353;
+  font-weight: 600;
+}
+
+.top-cancel-btn:hover{ filter:brightness(0.98) }
+
+/* Score input when editing */
+.score-input-edit{
+  width: 52px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  text-align: center;
+  font-family: "Satoshi Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: transparent !important; /* requested transparent background */
+  overflow-x: hidden;
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.score-input-edit::-webkit-scrollbar{display:none}
+.score-input-edit:focus{ outline: none; box-shadow: 0 4px 12px rgba(79,49,29,0.06); border-color: #4F311D }
+
+/* Hide native number input spin buttons */
+.score-input-edit::-webkit-outer-spin-button,
+.score-input-edit::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+.score-input-edit[type=number]{ -moz-appearance: textfield }
+
+.day-color-indicator{flex:0 0 auto}
+
+.card-frame.attendance-day-card > div{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inner padding and layout for the attendance day card */
+.card-frame.attendance-day-card .attendance-day-inner{
+  padding: 12px; /* preserve previous inline padding */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* Main content area (header + columns) should fill remaining height so table can scroll */
+.card-frame.attendance-day-card .attendance-day-main{
+  display: flex;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0; /* allow children to shrink and enable internal scrolling */
+}
+
+/* Ensure direct column children can shrink; this is required for overflow to work inside flex items */
+.card-frame.attendance-day-card .attendance-day-main > div{
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow child .attendance-day-table to get constrained height */
+}
+
+/* Make the table area flex to fill remaining vertical space inside the card */
+.card-frame.attendance-day-card .attendance-day-table{
+  flex: 1 1 auto;
+  min-height: 0; /* ensure the flex child can shrink and allow overflow to work */
+  max-height: none; /* let flex sizing control height */
+  overflow-y: auto; /* enable internal scrolling for attendee list */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.card-frame.attendance-day-card .attendance-day-table::-webkit-scrollbar{display:none}
+
+/* Ensure add-attendee column doesn't expand card height */
+.card-frame.attendance-day-card > div > .attendance-right,
+.card-frame.attendance-day-card .attendance-right{
+  flex: 0 0 auto;
+}
+
+/* Edit attendance root container */
+.edit-attendance-root {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Edit attendance wrapper - flex container for buttons and scroll area */
+.edit-attendance-wrapper {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto; /* left button, main scroll area (constrained), right button */
+  gap: 12px;
+  align-items: center; /* vertically center buttons with the middle of the cards */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden; /* ensure wrapper never overflows parent */
+}
+
+/* Ensure center column can shrink and won't force horizontal overflow */
+.edit-attendance-scroll-wrapper,
+.edit-attendance {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto; /* allow inner scrolling but not outer overflow */
+}
+
+/* Style the title inside the edit-attendance area to match design */
+.edit-attendance .attendance-title{
+  color: #000;
+  font-family: "Satoshi Variable";
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+  margin-bottom: 12px; /* same spacing as the other attendance title */
+}
+
+/* Ensure the wrapper buttons align to center of carousel */
+.edit-attendance-wrapper > button{
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  align-self: center;
+}
+
+/* Scroll wrapper - constrains the scrollable area */
+.edit-attendance-scroll-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure edit-attendance wrapper respects container */
+.edit-attendance {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Hide scrollbar for edit attendance scroll container */
+.edit-attendance-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.edit-attendance-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Carousel dots under edit-attendance cards */
+.carousel-dots{
+  display:flex;
+  justify-content:center;
+  margin-top:8px;
+  gap:8px;
+}
+
+.carousel-dot{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background: #EBE6DC; /* inactive fill */
+  border: 1px solid #989898; /* inactive stroke */
+  padding:0;
+  cursor:pointer;
+  box-sizing:border-box;
+}
+
+.carousel-dot.active{
+  background: #FFCA66; /* selected fill */
+  border: 1px solid #4F311D; /* selected stroke */
+}
+
 @media (max-width: 900px){
   .attendance-inner{flex-direction:column}
-  .attendance-left{width:100%}
+  /* On small screens the chart should stack above the card instead of overlaying */
+  .attendance-left{position:relative;width:100%;transform:none;left:auto;top:auto}
+  .attendance-card{margin-top:0}
+}
+
+/* DEBUG: temporary helpers to reveal input coverage and ensure pointer events reach inputs
+   Remove these after verifying the issue */
+/* Finalized input styling: ensure value is visible and not obscured */
+.score-input-edit{
+  position: relative;
+  z-index: auto;
+  background: rgba(255,200,100,0.06) !important; /* light orange tint */
+  color: #222 !important;
+  border: 1px dashed rgba(79,49,29,0.18) !important; /* subtle dashed stroke */
+}
+.attendance-day-table{ position: relative }
+
+/* Hide scrollbars more aggressively for scrollable UI used in attendance cards */
+.attendance-day-table,
+.attendance-day-table *,
+.edit-attendance-scroll,
+.edit-attendance-scroll *,
+.cf-select-menu,
+.cf-select-menu * {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.attendance-day-table::-webkit-scrollbar,
+.attendance-day-table *::-webkit-scrollbar,
+.edit-attendance-scroll::-webkit-scrollbar,
+.edit-attendance-scroll *::-webkit-scrollbar,
+.cf-select-menu::-webkit-scrollbar,
+.cf-select-menu *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Hide scrollbars in the add-attendee (right) column but allow scrolling */
+.attendance-right,
+.attendance-right *,
+.card-frame.attendance-day-card .attendance-right,
+.card-frame.attendance-day-card .attendance-right * {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.attendance-right::-webkit-scrollbar,
+.attendance-right *::-webkit-scrollbar,
+.card-frame.attendance-day-card .attendance-right::-webkit-scrollbar,
+.card-frame.attendance-day-card .attendance-right *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

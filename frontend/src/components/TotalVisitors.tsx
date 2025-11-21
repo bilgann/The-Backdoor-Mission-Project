@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import CardFrame from './CardFrame'
 import '../styles/TotalVisitors.css'
 import TimeRangeSlider from './TimeRangeSlider'
@@ -31,6 +31,11 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [range, setRange] = useState<'day' | 'week' | 'month' | 'year'>('day')
+  const frameRef = useRef<HTMLDivElement | null>(null)
+
+  const [tooltipVisible, setTooltipVisible] = useState(false)
+  const [tooltipContent, setTooltipContent] = useState('')
+  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 })
 
   const fetchStatistics = useCallback(async () => {
     try {
@@ -95,39 +100,73 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
     )
   }
 
+  const showTooltip = (dept: DeptData, e: React.MouseEvent) => {
+    if (!frameRef.current) return
+    const rect = frameRef.current.getBoundingClientRect()
+    const left = e.clientX - rect.left
+    const top = e.clientY - rect.top
+    const label = dept.value === 1 ? 'record' : 'records'
+    setTooltipContent(`${dept.value} ${label}`)
+    setTooltipPos({ left, top })
+    setTooltipVisible(true)
+  }
+
+  const moveTooltip = (e: React.MouseEvent) => {
+    if (!frameRef.current) return
+    const rect = frameRef.current.getBoundingClientRect()
+    setTooltipPos({ left: e.clientX - rect.left, top: e.clientY - rect.top })
+  }
+
+  const hideTooltip = () => setTooltipVisible(false)
+
   return (
     <CardFrame className="total-visitors-frame">
-      <div className="header-number-group">
-        <div className="total-visitors-header">
-          <h3 className="total-visitors-title">Total Visitors</h3>
-          <span className="total-visitors-date">{today}</span>
-        </div>
-
-        <div className="total-visitors-number-container">
-          <div className="total-visitors-number">{total}</div>
-        </div>
-      </div>
-
-      {/* Time range selector placed directly under the total number (sibling to header-number-group) */}
-      <TimeRangeSlider selectedRange={range} onRangeChange={(r) => setRange(r)} />
-
-      <div className="departments-row">
-        {data.map(dept => (
-          <div key={dept.name} className="dept-column">
-            <div className="dept-name">{dept.name}</div>
-            <div className="dept-pct">{Math.round(dept.pctOfTotal || 0)}%</div>
-
-            <div className="dept-bar-outer">
-              <div
-                className="dept-bar-inner"
-                style={{
-                  height: `${dept.pctOfMax || 0}%`,
-                  backgroundColor: SERVICE_COLORS[dept.name] || '#999'
-                }}
-              />
-            </div>
+      <div ref={frameRef} className="total-visitors-inner">
+        <div className="header-number-group">
+          <div className="total-visitors-header">
+            <h3 className="total-visitors-title">Total Visitors</h3>
+            <span className="total-visitors-date">{today}</span>
           </div>
-        ))}
+
+          <div className="total-visitors-number-container">
+            <div className="total-visitors-number">{total}</div>
+          </div>
+        </div>
+
+        {/* Time range selector placed directly under the total number (sibling to header-number-group) */}
+        <TimeRangeSlider selectedRange={range} onRangeChange={(r) => setRange(r)} />
+
+        <div className="departments-row">
+          {data.map(dept => (
+            <div key={dept.name} className="dept-column">
+              <div className="dept-name">{dept.name}</div>
+              <div className="dept-pct">{Math.round(dept.pctOfTotal || 0)}%</div>
+
+              <div className="dept-bar-outer">
+                <div
+                  className="dept-bar-inner"
+                  onMouseEnter={(e) => showTooltip(dept, e)}
+                  onMouseMove={(e) => moveTooltip(e)}
+                  onMouseLeave={() => hideTooltip()}
+                  style={{
+                    height: `${dept.pctOfMax || 0}%`,
+                    backgroundColor: SERVICE_COLORS[dept.name] || '#999'
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {tooltipVisible && (
+          <div
+            className="tv-tooltip"
+            style={{ left: tooltipPos.left, top: tooltipPos.top }}
+            aria-hidden={!tooltipVisible}
+          >
+            {tooltipContent}
+          </div>
+        )}
       </div>
     </CardFrame>
   )

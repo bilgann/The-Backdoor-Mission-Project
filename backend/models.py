@@ -44,7 +44,7 @@ class ClinicRecord(db.Model):
     __tablename__ = "clinic_records"
     clinic_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
     purpose_of_visit = db.Column(db.Text, nullable=True)
 
 
@@ -73,4 +73,4 @@ class ClientActivity(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)

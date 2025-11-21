@@ -38,7 +38,7 @@ const Clinic: React.FC = () => {
             const mapped = (data || []).map((r: any) => ({
                 id: r.clinic_id,
                 name: clientMap[r.client_id] || `Client #${r.client_id}`,
-                date: r.date,
+                date: r.date ? new Date(r.date).toLocaleString() : '',
                 purpose_of_visit: r.purpose_of_visit || ''
             }))
 
@@ -175,8 +175,8 @@ const Clinic: React.FC = () => {
                                         const payload = {
                                             client_id: Number(selectedClient.id),
                                             purpose_of_visit: String(purpose).trim(),
-                                            // backend expects a date-only string for clinic records
-                                            date: now.toISOString().slice(0, 10)
+                                            // send full ISO datetime so server stores exact submit time
+                                            date: now.toISOString()
                                         }
 
                                         const res = await fetch(`${config.API_BASE}/clinic_records`, {
@@ -200,7 +200,7 @@ const Clinic: React.FC = () => {
                                                 const newRow = {
                                                     id: newId,
                                                     name: selectedClient.name,
-                                                    date: payload.date,
+                                                    date: payload.date ? new Date(payload.date).toLocaleString() : '',
                                                     purpose_of_visit: payload.purpose_of_visit
                                                 }
                                                 setRows(prev => {

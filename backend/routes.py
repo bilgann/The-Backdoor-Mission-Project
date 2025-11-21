@@ -186,8 +186,16 @@ def register_routes(app):
             data = ClinicSchema().load(payload)
         except ValidationError as err:
             return jsonify({"errors": err.messages}), 400
-        if data["date"] > datetime.now().date():
-            return jsonify({"message": "date cannot be in the future"}), 400
+        # ensure date/time is present and is a datetime; default to now and clamp future times
+        try:
+            now_dt = datetime.now()
+            if not data.get('date'):
+                data['date'] = now_dt
+            else:
+                if data['date'] > now_dt:
+                    data['date'] = now_dt
+        except Exception:
+            data['date'] = datetime.now()
         client = Client.query.get(data["client_id"])
         if not client:
             return jsonify({"message": "Client not found"}), 404
@@ -222,6 +230,7 @@ def register_routes(app):
     @app.route("/activity", methods=["POST"]) 
     def create_activity():
         payload = request.json
+        print("[DEBUG routes] create_activity payload:", payload)
         try:
             data = ActivitySchema().load(payload)
         except ValidationError as err:
@@ -230,6 +239,7 @@ def register_routes(app):
         try:
             db.session.add(activity)
             db.session.commit()
+            print(f"[DEBUG routes] created activity id={activity.activity_id}")
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": "Database error", "error": str(e)}), 500
@@ -254,7 +264,23 @@ def register_routes(app):
             return jsonify({'message': 'Invalid date format for start_date/end_date, use YYYY-MM-DD'}), 400
         items = q.all()
         data = ActivitySchema(many=True).dump(items)
+        try:
+            print(f"[DEBUG routes] list_activities start={start} end={end} returned_count={len(data)}")
+        except Exception:
+            print("[DEBUG routes] list_activities returned (unable to stringify)")
         return jsonify(data), 200
+
+        @app.route('/debug/activity_raw', methods=['GET'])
+        def debug_activity_raw():
+            # Return the most recent activity records for debugging (no date filters)
+            try:
+                items = Activity.query.order_by(Activity.activity_id.desc()).limit(50).all()
+                data = ActivitySchema(many=True).dump(items)
+                print(f"[DEBUG routes] debug_activity_raw returned_count={len(data)}")
+                return jsonify({"count": len(data), "items": data}), 200
+            except Exception as e:
+                print(f"[DEBUG routes] debug_activity_raw error: {e}")
+                return jsonify({"message": "Error reading activities", "error": str(e)}), 500
 
     @app.route('/activity/<int:activity_id>', methods=['PUT'])
     def update_activity(activity_id):
@@ -290,11 +316,24 @@ def register_routes(app):
 
     @app.route("/client_activity", methods=["POST"]) 
     def create_client_activity():
-        payload = request.json
+        payload = request.json or {}
+        # Defensive: remove any provided primary key so DB autoincrement can work
+        payload.pop('id', None)
+        print(f"[DEBUG routes] create_client_activity payload keys: {list(payload.keys())}")
         try:
             data = ClientActivitySchema().load(payload)
         except ValidationError as err:
             return jsonify({"errors": err.messages}), 400
+        # Ensure date/time present for attendance records
+        try:
+            if not data.get('date'):
+                data['date'] = datetime.now()
+            else:
+                # clamp future timestamps
+                if data['date'] > datetime.now():
+                    data['date'] = datetime.now()
+        except Exception:
+            data['date'] = datetime.now()
         client = Client.query.get(data["client_id"])
         if not client:
             return jsonify({"message": "Client not found"}), 404
@@ -447,13 +486,38 @@ def register_routes(app):
             # prepare chart_data
             chart_data = []
             if time_range == 'day':
+                # include date-only services (Clinic, SafeSleep, Activity) into the current hour bucket
+                # compute today's totals for those services once and assign them to the bucket
+                clinic_today = db.session.query(func.count(ClinicRecord.clinic_id)).filter(func.date(ClinicRecord.date) == today).scalar() or 0
+                safe_sleep_today = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == today).scalar() or 0
+                activity_today = db.session.query(func.count(Activity.activity_id)).filter(Activity.date == today).scalar() or 0
+
+                # determine which hour bucket to put date-only records into (clamp to displayed hours 9-18)
+                current_hour = datetime.now().hour
+                bucket_hour = min(max(current_hour, 9), 18)
+
                 for hour in range(9, 19):
                     hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
                     hour_end = hour_start + timedelta(hours=1)
                     hour_total = 0
+
+                    # count records with explicit time_in in this hour
                     hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in >= hour_start, WashroomRecord.time_in < hour_end).scalar() or 0
                     hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in >= hour_start, CoatCheckRecord.time_in < hour_end).scalar() or 0
                     hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.time_in >= hour_start, SanctuaryRecord.time_in < hour_end).scalar() or 0
+
+                    # If some records only have a date (no time_in), include them in the current hour bucket
+                    # so they affect the day view immediately. This covers Clinic, SafeSleep, Activity
+                    # and any washroom/ sanctuary/coatcheck rows that were saved without time_in.
+                    if hour == bucket_hour:
+                        # clinic/safe_sleep/activity (date-only services)
+                        hour_total += (clinic_today or 0) + (safe_sleep_today or 0) + (activity_today or 0)
+
+                        # also include any washroom/sanctuary/coatcheck rows where time_in is null but date == today
+                        hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in == None, WashroomRecord.date == today).scalar() or 0
+                        hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in == None, CoatCheckRecord.date == today).scalar() or 0
+                        hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.time_in == None, SanctuaryRecord.date == today).scalar() or 0
+
                     label = f"{hour}am" if hour < 12 else ("12pm" if hour == 12 else f"{hour-12}pm")
                     chart_data.append({'label': label, 'value': int(hour_total)})
             elif time_range == 'week':

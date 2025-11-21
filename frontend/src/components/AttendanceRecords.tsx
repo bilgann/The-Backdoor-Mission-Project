@@ -6,17 +6,34 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 type ActivityItem = {
   activity_id: number
-  client_id?: number
   activity_name: string
   date: string
   start_time?: string | null
   end_time?: string | null
   attendance?: number
-  color?: string
+}
+
+type ClientActivity = {
+  id: number
+  client_id: number
+  client_name?: string
+  activity_id: number
+  activity_name?: string
+  date: string
+  score?: number | null
 }
 
 const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 const dayColors = ['#27608F','#FC8C37','#F6254F','#C3E4FF','#C3FFD7']
+
+function parseISODateToLocal(dstr: string){
+  if(!dstr) return new Date(dstr)
+  const parts = dstr.split('-').map(p=>Number(p))
+  if(parts.length >= 3){
+    return new Date(parts[0], parts[1]-1, parts[2])
+  }
+  return new Date(dstr)
+}
 
 function startOfWeek(d: Date){
   const date = new Date(d)
@@ -29,26 +46,39 @@ function startOfWeek(d: Date){
 
 interface Props {
   weekStart?: Date | null
+  refreshToken?: number
 }
 
-const AttendanceRecords: React.FC<Props> = ({ weekStart }) => {
+const AttendanceRecords: React.FC<Props> = ({ weekStart, refreshToken }) => {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [clientActs, setClientActs] = useState<ClientActivity[]>([])
 
   useEffect(() => {
     const ws = weekStart || startOfWeek(new Date())
     fetchForWeek(ws)
-  }, [weekStart])
+  }, [weekStart, refreshToken])
 
   async function fetchForWeek(ws: Date){
     setLoading(true)
     const start = ws.toISOString().slice(0,10)
     const end = new Date(ws.getTime() + 6*24*60*60*1000).toISOString().slice(0,10)
     try{
-      const res = await fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`)
-      if(res.ok){
-        const data = await res.json()
+      const [aRes, caRes] = await Promise.all([
+        fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`),
+        fetch(`${config.API_BASE}/client_activity?start_date=${start}&end_date=${end}`)
+      ])
+      if(aRes.ok){
+        const data = await aRes.json()
         setActivities(data)
+      } else {
+        console.error('[AttendanceRecords] activity fetch failed', aRes.status)
+      }
+      if(caRes.ok){
+        const ca = await caRes.json()
+        setClientActs(ca)
+      } else {
+        console.error('[AttendanceRecords] client_activity fetch failed', caRes.status)
       }
     }catch(e){/* ignore */}
     setLoading(false)
@@ -56,75 +86,79 @@ const AttendanceRecords: React.FC<Props> = ({ weekStart }) => {
 
   // group activities by weekday index 0..4 (Mon..Fri)
   const groups: ActivityItem[][] = [[],[],[],[],[]]
-  const ws = weekStart || startOfWeek(new Date())
   for(const a of activities){
-    const ad = new Date(a.date)
+    const ad = parseISODateToLocal(a.date)
     const dayIdx = (ad.getDay() === 0 ? 6 : ad.getDay()-1)
     if(dayIdx >=0 && dayIdx <=4){
       groups[dayIdx].push(a)
     }
   }
 
-  // compute attendance totals per day (use provided attendance when > 0, otherwise count event as 1)
-  const totals = groups.map(g => g.reduce((s, it) => {
-    const val = (typeof it.attendance === 'number' && it.attendance > 0) ? it.attendance : 1
-    return s + val
-  }, 0))
-  let grandTotal = totals.reduce((s,t)=>s+t, 0)
-  if(grandTotal <= 0) grandTotal = 1
+  // compute attendance totals per day based on clientActs
+  const totals = groups.map((g) => {
+    const activityIds = g.map(x => x.activity_id)
+    const cnt = clientActs.filter(ca => activityIds.includes(ca.activity_id)).length
+    return cnt
+  })
   const pieData = totals.map((t,idx)=>({ name: dayNames[idx], value: t }))
 
-  return (
-    <CardFrame className="attendance-card">
-      <div className="attendance-inner">
-        <div className="attendance-left">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} startAngle={90} endAngle={-270} paddingAngle={2}>
-                {pieData.map((_, idx) => (
-                  <Cell key={`cell-${idx}`} fill={dayColors[idx % dayColors.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value:any, name:any) => [`${value}`, name]} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+  function participantsForActivity(activity_id: number){
+    return clientActs.filter(ca => ca.activity_id === activity_id)
+  }
 
+  return (
+    <div className="attendance-inner">
+      <div className="attendance-left">
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} startAngle={90} endAngle={-270} paddingAngle={2}>
+              {pieData.map((_, idx) => (
+                <Cell key={`cell-${idx}`} fill={dayColors[idx % dayColors.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value:any, name:any) => [`${value}`, name]} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      <CardFrame className="attendance-card">
         <div className="attendance-right">
           <div className="records-table-wrapper">
             <table className="records-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Attendance</th>
-                  <th>Percentage</th>
-                  <th>Date</th>
+                  <th>Activity</th>
+                  <th>Client</th>
+                  <th>Score</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.map((g, dayIdx) => (
                   <React.Fragment key={dayIdx}>
                     <tr className="day-row">
-                      <td colSpan={4} className="day-header"><span className="day-color" style={{background: dayColors[dayIdx]}}></span>{dayNames[dayIdx]}</td>
+                      <td colSpan={3} className="day-header"><span className="day-name">{dayNames[dayIdx]}</span><span className="day-color" style={{background: dayColors[dayIdx]}}></span></td>
                     </tr>
                     {g.length === 0 ? (
                       <tr className="empty-row" key={`empty-${dayIdx}`}>
-                        <td colSpan={4} style={{padding:'8px 12px', color:'#777'}}>No activities</td>
+                        <td colSpan={3} style={{padding:'8px 12px', color:'#777'}}>No activities</td>
                       </tr>
                     ) : g.sort((a,b)=> new Date(a.date).getTime() - new Date(b.date).getTime()).map(it => {
-                      const ad = new Date(it.date)
-                      // match totals logic: treat missing or zero attendance as 1 for pie/table percentage
-                      const att = (typeof it.attendance === 'number' && it.attendance > 0) ? it.attendance : 1
-                      const pct = ((att / grandTotal) * 100)
-                      const pctText = `${pct.toFixed(1)}%`
-                      const dateText = ad.toLocaleDateString(undefined, {month:'short', day:'numeric'})
+                      const parts = participantsForActivity(it.activity_id)
                       return (
-                        <tr key={it.activity_id}>
-                          <td className="name-cell"><span className="name-color" style={{background: dayColors[dayIdx]}}></span>{it.activity_name}</td>
-                          <td>{att}</td>
-                          <td>{pctText}</td>
-                          <td>{dateText}</td>
-                        </tr>
+                        <React.Fragment key={it.activity_id}>
+                          <tr className="activity-row" key={`act-${it.activity_id}`}>
+                            <td className="name-cell" colSpan={3}><span className="name-color" style={{background: dayColors[dayIdx]}}></span>{it.activity_name}</td>
+                          </tr>
+                          {parts.length === 0 ? (
+                            <tr key={`pempty-${it.activity_id}`}><td colSpan={3} style={{padding:'6px 12px', color:'#777'}}>No attendees</td></tr>
+                          ) : parts.map(p => (
+                            <tr key={`p-${p.id}`}>
+                              <td style={{paddingLeft:20}}>{p.activity_name}</td>
+                              <td>{p.client_name ?? `Client #${p.client_id}`}</td>
+                              <td>{p.score ?? '-'}</td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
                       )
                     })}
                   </React.Fragment>
@@ -133,9 +167,10 @@ const AttendanceRecords: React.FC<Props> = ({ weekStart }) => {
             </table>
           </div>
         </div>
-      </div>
-    </CardFrame>
+      </CardFrame>
+    </div>
   )
 }
 
 export default AttendanceRecords
+

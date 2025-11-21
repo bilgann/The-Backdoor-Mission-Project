@@ -98,8 +98,10 @@
 /* Reduce inner bottom padding so bars can reach closer to the card stroke
    without changing the outer frame size. */
 .total-visitors-frame {
-  /* Match other cards' inner bottom padding so baselines align */
-  padding-bottom: 12px;
+  /* Match other cards' inner bottom padding so baselines align. Set bottom padding
+     equal to top padding (24px) so inner spacing is symmetric. This does not
+     change the outer card frame size. */
+  padding-bottom: 24px;
   /* Match TotalClients card height so inner content extends similar distance */
   min-height: 460px;
 }
@@ -108,6 +110,35 @@
 .total-visitors-frame {
   width: 480px;
   max-width: 480px;
+}
+
+/* Ensure the inner container is positioned so the tooltip can be placed absolutely */
+.total-visitors-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Make inner content a vertical flex column so header stays at top
+   and departments-row can expand and sit flush at the bottom. */
+.total-visitors-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tooltip for showing record counts on hover */
+.tv-tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -120%);
+  background: #DDFFC2;
+  color: #000;
+  padding: 6px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 40;
 }
 
 .dept-column {
@@ -149,11 +180,11 @@
 
 .dept-bar-outer {
   width: 100%;
-  /* Flexible bar container: fills the available vertical space inside the column
-     so percentage heights on the inner bar become visible pixel heights. Increase
-     min-height so bars extend further toward the bottom of the card for visual balance. */
+  /* Allow the outer bar container to expand within the column so bars can
+     fill remaining vertical space. Keep a reasonable minimum so bars are
+     visible, but do NOT change the outer card frame size. */
   flex: 1 1 auto;
-  min-height: 220px;
+  min-height: 120px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -163,7 +194,24 @@
   width: 56px; /* wider bars */
   border-radius: 5px 5px 0 0;
   display: block;
+  /* Fill the available outer container height so bars reach down to the
+     bottom of the inner content. Remove fixed visual transforms so height
+     reflects actual available space. */
+  height: 100%;
+  max-height: none;
+  box-sizing: border-box;
 }
+
+/* Department labels should sit above the bar container area; reduce spacing */
+.dept-name { margin-bottom: 0; }
+.dept-pct { margin-top: 12px; margin-bottom: 6px; }
+
+/* Make bars visually longer without changing the outer card size.
+   We use a vertical scale transform anchored at the bottom so bars grow
+   up/down visually while keeping layout sizes stable. The CSS variable
+   `--tv-stretch` controls how much taller the bars appear (1 = normal).
+   The transform does not affect the card frame size. */
+.dept-bar-outer { overflow: visible; }
 
 @media (max-width: 768px) {
   .card-frame {

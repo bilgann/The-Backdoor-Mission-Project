@@ -43,7 +43,14 @@
   font-size: var(--sds-typography-body-size-medium);
   font-weight: var(--sds-typography-body-font-weight-regular);
   line-height: 140%;
+  /* hide any scrollbars that may appear inside inputs while preserving scroll behavior */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
+
+.cf-input::-webkit-scrollbar{ display: none; width:0; height:0 }
+.cf-input::-webkit-scrollbar-thumb{ background: transparent }
+.cf-input::-webkit-scrollbar-track{ background: transparent }
 
 /* Remove default focus outline/stroke */
 .cf-input:focus, .cf-input:focus-visible {
@@ -122,7 +129,18 @@ select.cf-input option {
 /* required asterisk on labels */
 .cf-required { color: #d32; font-weight: 600; margin-left: 6px; }
 
-.cf-select-caret { margin-left: 8px; color: #5B5B5B }
+.cf-select-caret {
+  margin-left: 8px;
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8' fill='none'><path d='M13 0.5L6.75 6.75L0.5 0.500001' stroke='%23B3B3B3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 8px;
+  color: transparent; /* hide any text fallback */
+  font-size: 0;
+}
 
 .cf-select-menu {
   position: absolute;
@@ -137,7 +155,14 @@ select.cf-input option {
   z-index: 40;
   list-style: none; /* remove default bullets */
   margin: 0;
+  /* allow the menu to scroll when long but hide native scrollbars */
+  max-height: 240px;
+  overflow-y: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
+
+.cf-select-menu::-webkit-scrollbar{ display: none }
 
 .cf-select-option {
   padding: 8px 12px;

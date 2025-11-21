@@ -6,6 +6,11 @@
 	padding-right:0;
 	box-sizing:border-box;
 	min-height: calc(100vh - 120px);
+	/* ensure following content sits below the calendar by 45px and
+	   provide extra bottom padding so absolutely positioned events
+	   don't visually overflow onto the next card */
+	margin-bottom: 0; /* remove margin-bottom in favor of padding */
+	padding-bottom: calc(100px + var(--row-height));
 	--row-height: 54px; /* row height now includes previous gap (36 + 18) */
 	--row-gap: 0px; /* gaps removed; heights include gap amount */
 	--time-label-offset: 28px; /* extra vertical spacing applied to hour labels (tweak to taste) */
@@ -20,16 +25,16 @@
 }
 .activity-left{display:flex;gap:12px;align-items:center}
 .today-label{color:#000;font-family:"Satoshi Variable";font-size:20px;font-weight:400;line-height:120%;letter-spacing:-0.6px}
-.today-button{border-radius:5px;border:1px solid #CCC;background:#F1F1F1;color:#5B5B5B;font-family:"Satoshi Variable";font-size:13px;font-weight:400;line-height:120%;letter-spacing:-0.39px;padding:6px 10px}
+.today-button{border-radius:20px;border:1px solid #CCC;background:#F1F1F1;color:#5B5B5B;font-family:"Satoshi Variable";font-size:13px;font-weight:400;line-height:120%;letter-spacing:-0.39px;padding:6px 10px}
 .activity-right{display:flex}
 
 /* New button: black background, #fdfdfd text, plus icon spacing */
 .new-button{
-	border-radius:5px;
+	border-radius:20px;
 	border:1px solid #000;
 	background:#000;
 	color:#fdfdfd;
-	padding:4px 10px;
+	padding:6px 12px;
 	font-size:12px;
 	display:inline-flex;
 	align-items:center;
@@ -108,13 +113,148 @@
 .ac-event-name{font-weight:600}
 .ac-event-time{font-size:11px;color:inherit;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0.92;margin-top:0;transform:translateY(-2px)}
 
+/* Event inline buttons */
+.event-btns-wrapper{display:flex;gap:6px;align-items:center}
+.event-edit-btn{border-radius:20px;background:#FFCA66;border:none;padding:4px 8px;cursor:pointer;font-weight:600;font-size:12px}
+.event-delete-btn{border-radius:20px;background:#FD5151;border:none;padding:4px 8px;cursor:pointer;font-weight:600;font-size:12px}
+
+/* Calendar edit button in header */
+.edit-cal-btn{border-radius:20px;background:#F07D0B;border:none;padding:6px 10px;margin-right:8px;cursor:pointer;font-weight:600;font-size:12px}
+
+.top-save-btn{background:#DEFFA8;border-radius:20px;border:none;padding:6px 8px}
+.top-cancel-btn{background:#FFC2C2;border-radius:20px;border:none;padding:6px 8px;margin-right:8px}
+
 /* Modal styles */
 .ac-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center}
 .ac-modal-overlay{z-index:10000}
-.ac-modal{background:#fff;padding:16px;border-radius:8px;width:360px;z-index:10001}
-.ac-form{display:flex;flex-direction:column;gap:8px}
+.ac-modal{background:#fff;padding:16px;border-radius:8px;width:360px;z-index:10001;position:relative;padding-bottom:72px}
+/* Modal heading: Create Event */
+.ac-modal h3{
+	color: #000;
+	font-family: "Satoshi Variable";
+	font-size: 24px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 120%; /* 28.8px */
+	letter-spacing: -0.72px;
+	margin: 0 0 20px 0; /* 20px spacing between heading and first form label */
+}
+.ac-form{display:flex;flex-direction:column;gap:12px}
 .ac-form label{display:flex;flex-direction:column;font-size:13px}
-.ac-form input{padding:6px;border:1px solid #ccc;border-radius:4px}
-.ac-form-actions{display:flex;justify-content:flex-end;gap:8px}
-.ac-btn{padding:6px 10px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2}
-.ac-btn-primary{background:#0f62fe;color:#fff;border-color:#0f62fe}
+/* Inputs and native controls - prettier, rounded, subtle shadow to match site aesthetic */
+.ac-form input,
+.ac-form select,
+.ac-form textarea{
+	padding:10px 12px;
+	border:1px solid #e6e6e6;
+	border-radius:8px;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(16,24,40,0.03) inset;
+	font-family: "Satoshi Variable";
+	font-size:14px;
+	transition: box-shadow .15s ease, border-color .15s ease, transform .06s ease;
+}
+.ac-form input[type="date"],
+.ac-form input[type="time"]{
+	/* keep native appearance to ensure values are visible and controls render properly */
+	appearance: auto;
+	-webkit-appearance: auto;
+	color: #0b0b0b;
+}
+.ac-form input:focus, .ac-form select:focus, .ac-form textarea:focus{
+	outline: none;
+	border-color: #95F492;
+	box-shadow: 0 4px 18px rgba(14,105,34,0.08), 0 0 0 4px rgba(149,244,146,0.10);
+}
+.ac-form input::placeholder{color:#b9b9b9}
+
+/* Ensure input text is vertically centered and visible */
+.ac-form input,
+.ac-form select,
+.ac-form textarea{
+	line-height: 1.2;
+	color: #0b0b0b;
+}
+
+/* Place action buttons area - keep normal flow; buttons themselves are pinned to modal corners */
+.ac-form-actions{display:flex;justify-content:flex-end;gap:8px;}
+/* Buttons: larger font, rounded corners, subtle shadow */
+.ac-btn{
+	padding:6px 12px; /* comfortable tappable size while staying compact */
+	border-radius:20px; /* rounded corners */
+	border:1px solid transparent;
+	background:#f7f7f7;
+	font-size:16px;
+	font-family: "Satoshi Variable";
+	box-shadow: 0 2px 6px rgba(16,24,40,0.04);
+	transition: transform .06s ease, box-shadow .12s ease, opacity .08s ease;
+}
+/* Create (primary) button styling - green background and darker green text */
+.ac-btn-primary{
+	background:#95F492; /* requested background */
+	color:#1F7A2A; /* darker green for text */
+	border-color: transparent;
+	font-size:16px;
+	box-shadow: 0 6px 18px rgba(31,122,42,0.12);
+	position: absolute;
+	right: 16px;
+	bottom: 16px;
+}
+/* Cancel button override - pink background and specific red text color */
+.ac-btn[type="button"]{
+	background:#FF9898; /* cancel-like background */
+	color:#F93D3D; /* requested cancel text color */
+	border-color:transparent;
+	font-size:16px;
+	box-shadow: 0 2px 10px rgba(249,61,61,0.08);
+	position: absolute; /* pin to bottom-left of modal */
+	left: 16px;
+	bottom: 16px;
+}
+
+/* Small hover states */
+.ac-btn:hover{transform:translateY(-1px);opacity:0.98}
+.ac-btn:active{transform:translateY(0)}
+
+/* Attendance section spacing (replaces inline margin) */
+.attendance-section{margin-top:0}
+.attendance-section .attendance-title{
+	color: #000;
+	font-family: "Satoshi Variable";
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 120%;
+	/* 24px when 120% of 20px */
+	letter-spacing: -0.6px;
+	margin-bottom: 12px;
+}
+
+/* Responsive adjustments to avoid overlap/mashing on smaller screens */
+@media (max-width: 1024px){
+	/* allow calendar to shrink vertically instead of forcing a large viewport height */
+	.activity-panel{min-height:auto}
+	.calendar-grid{height:auto}
+}
+
+@media (max-width: 900px){
+	/* Stack calendar pieces and allow horizontal scroll for days */
+	.calendar-grid{display:block;height:auto;margin-top:12px}
+	.time-col{width:100%;display:flex;overflow-x:auto;padding-bottom:8px}
+	.time-cell{min-height:var(--row-height);padding:6px 0}
+	.days-row{margin-left:0;width:100%;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;overflow-x:auto}
+	.days-col{display:flex;gap:12px;overflow-x:auto}
+	.day-column{min-width:200px;flex:0 0 auto;border-left:none}
+	.day-grid{grid-auto-rows:var(--row-height)}
+	.day-grid .slot-cell{border-bottom:1px solid #e6e6e6}
+	.week-nav{align-items:center}
+	.activity-header{padding-top:12px}
+	.attendance-section{margin-top:16px}
+}
+
+@media (max-width: 480px){
+	/* Tighten spacing on very small screens */
+	.days-row{gap:8px}
+	.day-column{min-width:160px}
+	.attendance-section{margin-top:12px}
+}

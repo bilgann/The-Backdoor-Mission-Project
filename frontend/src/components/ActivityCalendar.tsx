@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import config from '../config'
 import CreateEventModal from './CreateEventModal'
 import '../styles/Activity.css'
@@ -15,6 +15,15 @@ type ActivityItem = {
 
 const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 
+function parseISODateToLocal(dstr: string){
+  if(!dstr) return new Date(dstr)
+  const parts = dstr.split('-').map(p=>Number(p))
+  if(parts.length >= 3){
+    return new Date(parts[0], parts[1]-1, parts[2])
+  }
+  return new Date(dstr)
+}
+
 function startOfWeek(d: Date){
   const date = new Date(d)
   const day = date.getDay()
@@ -27,12 +36,15 @@ function startOfWeek(d: Date){
 
 interface ActivityCalendarProps {
   onWeekChange?: (d: Date) => void
+  onEventCreated?: () => void
 }
 
-const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => {
+const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange, onEventCreated }) => {
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()))
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [calendarEditMode, setCalendarEditMode] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<ActivityItem | null>(null)
   const panelRef = React.useRef<HTMLDivElement | null>(null)
   const [rowHeightPx, setRowHeightPx] = useState<number>(54)
   const [rowGapPx, setRowGapPx] = useState<number>(0)
@@ -60,12 +72,66 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
     return () => window.removeEventListener('resize', measure)
   }, [])
 
+  // compute column layout per-day so overlapping events are shown side-by-side
+  const layoutMap = useMemo(() => {
+    const map: Record<number, { col: number, total: number }> = {}
+    // group activities by date (day index relative to weekStart)
+    const days: ActivityItem[][] = [[],[],[],[],[]]
+    for(const a of activities){
+      const ad = parseISODateToLocal(a.date)
+      const dayIdx = (ad.getDay() === 0 ? 6 : ad.getDay()-1)
+      if(dayIdx >=0 && dayIdx <=4) days[dayIdx].push(a)
+    }
+
+    for(let dayIdx=0; dayIdx<5; dayIdx++){
+      const evs = days[dayIdx].map(ev => {
+        const start = ev.start_time ? new Date(ev.start_time) : null
+        const end = ev.end_time ? new Date(ev.end_time) : null
+        const defaultStart = 13
+        const sHour = start ? start.getHours() : defaultStart
+        const sMin = start ? start.getMinutes() : 0
+        const eHour = end ? end.getHours() : (sHour + 1)
+        const eMin = end ? end.getMinutes() : 0
+        const startTotal = sHour + sMin/60
+        const endTotal = eHour + eMin/60
+        return { ev, startTotal, endTotal }
+      }).sort((a,b) => a.startTotal - b.startTotal)
+
+      const columnsEnd: number[] = []
+      for(const item of evs){
+        let placed = false
+        for(let ci = 0; ci < columnsEnd.length; ci++){
+          if(columnsEnd[ci] <= item.startTotal){
+            // place here
+            map[item.ev.activity_id] = { col: ci, total: 0 }
+            columnsEnd[ci] = item.endTotal
+            placed = true
+            break
+          }
+        }
+        if(!placed){
+          columnsEnd.push(item.endTotal)
+          map[item.ev.activity_id] = { col: columnsEnd.length - 1, total: 0 }
+        }
+      }
+      const totalCols = columnsEnd.length || 1
+      // fill total for each event of this day
+      for(const item of evs){
+        if(map[item.ev.activity_id]) map[item.ev.activity_id].total = totalCols
+      }
+    }
+
+    return map
+  }, [activities])
+
   async function fetchActivities(){
     const start = weekStart.toISOString().slice(0,10)
     const end = new Date(weekStart.getTime() + 6*24*60*60*1000).toISOString().slice(0,10)
-    const res = await fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`)
-    if(res.ok){
-      const data = await res.json()
+    try{
+      const res = await fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`)
+      if(res.ok){
+        const data = await res.json()
+        console.debug('[ActivityCalendar] fetched activities count=', Array.isArray(data)?data.length:0)
       // merge local colors stored in localStorage
       try{
         const map = JSON.parse(localStorage.getItem('activityColors') || '{}')
@@ -76,6 +142,12 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
         }
       }catch(e){/* ignore */}
       setActivities(data)
+      } else {
+        const txt = await res.text()
+        console.error('[ActivityCalendar] fetch failed', res.status, txt)
+      }
+    }catch(e){
+      console.error('[ActivityCalendar] network error while fetching activities', e)
     }
   }
 
@@ -93,7 +165,7 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
   const hours = Array.from({length:11}).map((_,i)=>8+i)
 
   function renderEvent(ev: ActivityItem){
-    const evDate = new Date(ev.date)
+    const evDate = parseISODateToLocal(ev.date)
     const dayIdx = (evDate.getDay() === 0 ? 6 : evDate.getDay()-1) // Monday=0
     if(dayIdx < 0 || dayIdx > 4) return null
 
@@ -133,21 +205,41 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
     const bg = (ev as any).color || '#cfe9ff'
     const textColor = textForBg[bg] || '#000'
 
+    // apply column-based left/width if layout computed
+    const layout = (layoutMap && (layoutMap as any)[ev.activity_id]) || null
     const style: React.CSSProperties = {
       top: `${top}px`,
       height: `${height}px`,
       position: 'absolute',
-      left: '4px',
-      right: '4px',
       background: bg,
       borderRadius: 10,
       color: textColor,
       paddingTop: 8,
-      paddingLeft: 10
+      paddingLeft: 10,
+      zIndex: 10
+    }
+    if(layout){
+      const col = layout.col
+      const total = layout.total || 1
+      const widthPct = 100 / total
+      const leftPct = col * widthPct
+      style.left = `${leftPct}%`
+      // subtract small gap
+      style.width = `calc(${widthPct}% - 8px)`
+      style.zIndex = 20 + col
+    } else {
+      style.left = '4px'
+      style.right = '4px'
     }
 
     return (
       <div key={ev.activity_id} className={`ac-event ac-event-${dayIdx}`} style={style} title={ev.activity_name}>
+        {calendarEditMode && (
+          <div className="event-btns-wrapper" style={{position:'absolute', top:6, right:6, zIndex:60}}>
+            <button className="event-edit-btn" onClick={(e)=>{ e.stopPropagation(); console.debug('[ActivityCalendar] edit click', ev); setEditingEvent(ev); setShowModal(true) }} aria-label="Edit event">✎</button>
+            <button className="event-delete-btn" onClick={async (e)=>{ e.stopPropagation(); if(!confirm('Delete this event?')) return; try{ const id = (ev as any).activity_id ?? (ev as any).activityId ?? (ev as any).id; console.debug('[ActivityCalendar] delete id=', id); const res = await fetch(`${config.API_BASE}/activity/${id}`, { method: 'DELETE' }); if(res.ok){ await fetchActivities(); if(onEventCreated) onEventCreated() } else { const txt = await res.text().catch(()=>'<no body>'); console.error('[ActivityCalendar] delete failed', res.status, txt); alert('Delete failed: '+res.status+' '+txt) } }catch(err){ console.error('[ActivityCalendar] delete network error', err); alert('Network error') } }} aria-label="Delete event">✕</button>
+          </div>
+        )}
         <div className="ac-event-name">{ev.activity_name}</div>
         <div className="ac-event-time">{start ? `${start.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})} - ${end ? end.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : ''}` : ''}</div>
       </div>
@@ -168,7 +260,15 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
           <button className="today-button" onClick={goToday}>Today</button>
         </div>
         <div className="activity-right">
-          <button className="new-button" onClick={()=>setShowModal(true)}><span className="plus">+</span>New</button>
+          {!calendarEditMode ? (
+            <button className="edit-cal-btn" onClick={() => setCalendarEditMode(true)}>Edit</button>
+          ) : (
+            <div style={{display:'flex',gap:8}}>
+              <button className="top-save-btn" onClick={() => setCalendarEditMode(false)} aria-label="Save">✓</button>
+              <button className="top-cancel-btn" onClick={() => setCalendarEditMode(false)} aria-label="Cancel">✕</button>
+            </div>
+          )}
+          <button className="new-button" onClick={()=>{ setEditingEvent(null); setShowModal(true) }}><span className="plus">+</span>New</button>
         </div>
       </div>
 
@@ -207,7 +307,7 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
                   <div key={h} className="slot-cell" data-hour={h}></div>
                 ))}
                 {activities.filter(a => {
-                  const ad = new Date(a.date)
+                  const ad = parseISODateToLocal(a.date)
                   return ad.getFullYear()===d.getFullYear() && ad.getMonth()===d.getMonth() && ad.getDate()===d.getDate()
                 }).map(ev => renderEvent(ev))}
               </div>
@@ -216,7 +316,7 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange }) => 
         </div>
       </div>
 
-      {showModal && <CreateEventModal onClose={()=>{setShowModal(false); fetchActivities()}} />}
+      {showModal && <CreateEventModal existingEvent={editingEvent || undefined} onSaved={() => { fetchActivities().then(() => { if(onEventCreated) onEventCreated() }) }} onClose={() => { setShowModal(false); setEditingEvent(null); fetchActivities().then(() => { if(onEventCreated) onEventCreated() }) }} />}
     </div>
   )
 }

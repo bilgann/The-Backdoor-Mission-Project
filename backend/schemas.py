@@ -66,13 +66,19 @@ class SanctuarySchema(Schema):
 class ClinicSchema(Schema):
     clinic_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    date = fields.DateTime(required=True)
     purpose_of_visit = fields.Str(required=False, validate=validate.Length(min=1))
 
     @validates('date')
     def validate_date(self, value, **kwargs):
-        if value > date.today():
-            raise ValidationError("date cannot be in the future")
+        try:
+            # value is expected to be a datetime; compare its date portion
+            if value.date() > date.today():
+                raise ValidationError("date cannot be in the future")
+        except Exception:
+            # fallback for date-like values
+            if value > date.today():
+                raise ValidationError("date cannot be in the future")
 
 
 class SafeSleepSchema(Schema):
@@ -97,4 +103,4 @@ class ClientActivitySchema(Schema):
     id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
     activity_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    date = fields.DateTime(required=True)

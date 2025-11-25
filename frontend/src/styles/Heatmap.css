@@ -1,0 +1,194 @@
+.heatmap-root {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* configuration variables */
+:root {
+  --cell-height: 28px; /* reduced height */
+  --row-gap: 8px;
+  --header-height: 24px;
+  --ylabels-width: 140px; /* wider day labels column */
+}
+
+.heatmap-grid-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+}
+
+.heatmap-ylabels {
+  display: grid;
+  grid-template-rows: repeat(5, var(--cell-height));
+  row-gap: var(--row-gap);
+  flex: 0 0 var(--ylabels-width);
+  width: var(--ylabels-width);
+  margin-top: var(--header-height);
+}
+
+.heatmap-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.heatmap-legend-block {
+  display: flex;
+  flex-direction: row; /* horizontal layout */
+  gap: 12px;
+  justify-content: center; /* center under the day labels */
+  margin-top: 6px;
+  padding-left: 6px;
+}
+
+.heatmap-legend-vertical-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-heatbox {
+  width: 36px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+
+/* separate legend container placed under the heatmap area */
+.heatmap-legend-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px; /* increased spacing from heatmap */
+  /* align left with the y-label column */
+  padding-left: 6px;
+  align-items: center;
+}
+
+.heatmap-legend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.heatmap-ylabel {
+  color: #A09E9E;
+  font-family: "Satoshi Variable";
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%;
+  letter-spacing: -0.39px;
+  height: var(--cell-height);
+  display: flex;
+  align-items: center;
+  justify-content: center; /* center horizontally within the y-label column */
+  text-align: center;
+}
+
+.heatmap-grid {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.heatmap-grid-header {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+  height: var(--header-height);
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.heatmap-xlabel {
+  color: #A09E9E;
+  font-family: "Satoshi Variable";
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%;
+  letter-spacing: -0.39px;
+  text-align: center;
+}
+
+/* Card title for Frequency By Day/Time */
+.heatmap-card-title {
+  color: #000;
+  font-family: "Satoshi Variable";
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+}
+
+.heatmap-grid-body {
+  display: grid;
+  grid-template-rows: repeat(5, var(--cell-height));
+  row-gap: var(--row-gap);
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  column-gap: 8px;
+}
+
+.heatmap-cell {
+  width: 100%;
+  height: var(--cell-height);
+  border-radius: 5px;
+}
+.heatmap-cell-label {
+  display: inline-block;
+  color: #FFFFFF;
+  font-family: "Satoshi Variable";
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 120%;
+  text-align: center;
+  width: 100%;
+}
+.heatmap-legend {
+  margin-top: 12px;
+}
+.heatmap-legend-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.heatmap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.legend-swatch {
+  width: var(--cell-size);
+  height: calc(var(--cell-size) / 2);
+  border-radius: 4px;
+}
+.legend-label {
+  color: #A09E9E;
+  font-family: "Satoshi Variable";
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 120%;
+  letter-spacing: -0.39px;
+}
+
+/* Make the card responsive: allow horizontal scroll on small screens */
+@media (max-width: 600px) {
+  .heatmap-grid-header, .heatmap-row {
+    grid-template-columns: repeat(10, 60px);
+  }
+  .heatmap-xlabel, .heatmap-ylabel {
+    font-size: 12px;
+  }
+  :root {
+    --cell-height: 26px;
+    --ylabels-width: 110px;
+  }
+}

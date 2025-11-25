@@ -72,6 +72,29 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange, onEve
     return () => window.removeEventListener('resize', measure)
   }, [])
 
+  // keep weekStart in sync with the real current week.
+  // This checks hourly and updates weekStart when the Monday boundary passes.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const nowStart = startOfWeek(new Date())
+      setWeekStart(prev => {
+        if(!prev) return nowStart
+        if(prev.getTime() !== nowStart.getTime()) return nowStart
+        return prev
+      })
+    }, 60 * 60 * 1000) // every hour
+
+    // run once immediately on mount to ensure freshness
+    const nowStart = startOfWeek(new Date())
+    setWeekStart(prev => {
+      if(!prev) return nowStart
+      if(prev.getTime() !== nowStart.getTime()) return nowStart
+      return prev
+    })
+
+    return () => clearInterval(id)
+  }, [])
+
   // compute column layout per-day so overlapping events are shown side-by-side
   const layoutMap = useMemo(() => {
     const map: Record<number, { col: number, total: number }> = {}
@@ -273,11 +296,18 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange, onEve
       </div>
 
       <div className="week-nav">
-        <button className="nav-btn" onClick={prevWeek} aria-label="Previous week"> 
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M15.8333 10.0001H4.16663M4.16663 10.0001L9.99996 15.8334M4.16663 10.0001L9.99996 4.16675" stroke="#5B5B5B" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+        <div className="nav-group">
+          <button className="nav-btn" onClick={prevWeek} aria-label="Previous week"> 
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M15.8333 10.0001H4.16663M4.16663 10.0001L9.99996 15.8334M4.16663 10.0001L9.99996 4.16675" stroke="#5B5B5B" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button className="nav-btn" onClick={nextWeek} aria-label="Next week">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4.16671 10.0001H15.8334M15.8334 10.0001L10 15.8334M15.8334 10.0001L10 4.16675" stroke="#5B5B5B" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
         <div className="days-row">
           {days.map((d,idx)=> (
             <div key={idx} className="day-header">
@@ -286,11 +316,6 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange, onEve
             </div>
           ))}
         </div>
-        <button className="nav-btn" onClick={nextWeek} aria-label="Next week">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M4.16671 10.0001H15.8334M15.8334 10.0001L10 15.8334M15.8334 10.0001L10 4.16675" stroke="#5B5B5B" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
       </div>
 
       <div className="calendar-grid">

@@ -6,7 +6,7 @@
  * with time range selection and service breakdown.
  */
 
-import TotalClients from '../components/TotalClients'
+import TotalServicesUsed from '../components/TotalServicesUsed'
 import '../styles/GetClients.css'
 
 const GetClients = () => {
@@ -14,7 +14,7 @@ const GetClients = () => {
         <div className="get-clients-page">
             <h1 className="page-title">Get Clients</h1>
             <div className="get-clients-content">
-                <TotalClients />
+                <TotalServicesUsed />
             </div>
         </div>
     )

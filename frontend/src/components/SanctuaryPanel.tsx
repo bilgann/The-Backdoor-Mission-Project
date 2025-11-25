@@ -61,7 +61,7 @@ const SanctuaryPanel: React.FC = () => {
           </div>
 
           <div className="ctp-range-frame ctp-range-under">
-            <div className="ctp-range-inner">
+            <div className="ctp-range-inner" style={{ ['--ctp-accent' as any]: '#DDF581' }}>
               {RANGES.map((r) => (
                 <button
                   key={r}

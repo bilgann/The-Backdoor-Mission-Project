@@ -25,6 +25,17 @@
   gap: 12px;
 }
 
+/* Layout: make left column a fixed width matching TotalClients card and allow
+   visitors column to expand to fill remaining space so its card can reach
+   the main-content-inner right padding. */
+.clients-column {
+  flex: 0 0 420px; /* match TotalClients width */
+}
+
+.visitors-column {
+  flex: 1 1 0;
+}
+
 .clients-column {
   display: flex;
   flex-direction: column;

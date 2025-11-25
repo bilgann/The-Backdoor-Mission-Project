@@ -8,7 +8,7 @@
  */
 
 import { Link } from 'react-router-dom'
-import TotalClients from '../components/TotalClients'
+import TotalServicesUsed from '../components/TotalServicesUsed'
 import TotalVisitors from '../components/TotalVisitors'
 import ActionButton from '../components/ActionButton'
 import '../styles/Home.css'
@@ -23,7 +23,7 @@ const Home = () => {
                                 <div className="dashboard-widgets">
                                         {/* Left column: TotalClients + Clients button */}
                                         <div className="clients-column">
-                                                <TotalClients />
+                                                <TotalServicesUsed />
                                                 <div className="button-row">
                                                     <ActionButton
                                                         to="/clients"
@@ -40,19 +40,7 @@ const Home = () => {
 
                                         {/* Right column: TotalVisitors + visitor-data button */}
                                         <div className="visitors-column">
-                                                <TotalVisitors />
-                                                <div className="button-row">
-                                                    <ActionButton
-                                                        to="/visitor-data"
-                                                        label="see visitor data"
-                                                        className="get-clients-button"
-                                                        icon={(
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                                                <path d="M0.5 11.5L11.5 0.5M11.5 0.5H0.5M11.5 0.5V11.5" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
-                                                            </svg>
-                                                        )}
-                                                    />
-                                                </div>
+                                            <TotalVisitors />
                                         </div>
                                 </div>
 

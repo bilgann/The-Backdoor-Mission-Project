@@ -1,0 +1,53 @@
+/* Unique Clients component styles - match TotalClients dimensions exactly */
+
+.unique-clients-container {
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  height: 460px; /* same fixed card height as TotalClients */
+  padding: 20px 15px 8px 15px;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  border: 1px solid #454545;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* Reuse the same internal layout classes used by TotalClients for consistent sizing */
+.unique-clients-container .total-clients-header { min-height: 36px }
+.unique-clients-container .total-clients-title { color: #000 }
+.unique-clients-container .total-clients-number { color: #000 }
+
+/* Override time range slider color for this card to use the requested pink */
+.unique-clients-container .time-range-slider {
+  background-color: #FE87B1;
+}
+
+/* Active button color remains dark for contrast */
+.unique-clients-container .time-range-button.active { color: #000 }
+
+/* Ensure responsive matches TotalClients */
+@media (max-width: 768px) {
+  .unique-clients-container { width: 100%; max-width: 100%; padding: 16px }
+  .unique-clients-container .total-clients-title { font-size: 18px }
+  .unique-clients-container .total-clients-number { font-size: 28px }
+}
+
+@media (max-width: 480px) {
+  .unique-clients-container { width: 100%; max-width: 100%; padding: 12px; border-radius: 12px }
+  .unique-clients-container .total-clients-title { font-size: 16px }
+  .unique-clients-container .total-clients-number { font-size: 24px }
+}
+
+/* Make chart area fill the remaining vertical space and extend to the left like TotalClients */
+.total-clients-chart-fill {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  margin-left: -15px;
+  width: calc(100% + 15px);
+}

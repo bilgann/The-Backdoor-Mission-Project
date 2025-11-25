@@ -127,10 +127,6 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
             <h3 className="total-visitors-title">Total Visitors</h3>
             <span className="total-visitors-date">{today}</span>
           </div>
-
-          <div className="total-visitors-number-container">
-            <div className="total-visitors-number">{total}</div>
-          </div>
         </div>
 
         {/* Time range selector placed directly under the total number (sibling to header-number-group) */}
@@ -154,6 +150,9 @@ const TotalVisitors: React.FC<{ showRangeSelector?: boolean }> = ({ showRangeSel
                   }}
                 />
               </div>
+
+              {/* Numeric value displayed under each service bar */}
+              <div className="dept-value">{dept.value}</div>
             </div>
           ))}
         </div>

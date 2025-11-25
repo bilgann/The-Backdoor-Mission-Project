@@ -11,9 +11,10 @@ import '../styles/TimeRangeSlider.css'
 interface TimeRangeSliderProps {
     selectedRange: 'day' | 'week' | 'month' | 'year'
     onRangeChange: (range: 'day' | 'week' | 'month' | 'year') => void
+    accentColor?: string // optional accent color for slider and active button
 }
 
-const TimeRangeSlider = ({ selectedRange, onRangeChange }: TimeRangeSliderProps) => {
+const TimeRangeSlider = ({ selectedRange, onRangeChange, accentColor }: TimeRangeSliderProps) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const [sliderLeft, setSliderLeft] = useState(6) // Initial left position (padding)
     
@@ -60,7 +61,7 @@ const TimeRangeSlider = ({ selectedRange, onRangeChange }: TimeRangeSliderProps)
     }, [selectedRange, ranges])
 
     return (
-        <div className="time-range-selector" ref={containerRef}>
+        <div className="time-range-selector" ref={containerRef} style={accentColor ? ({ ['--trs-accent' as any]: accentColor } as any) : undefined}>
             {/* Sliding orange background */}
             <div 
                 className="time-range-slider"

@@ -11,6 +11,7 @@ const CoatCheckPanel: React.FC = () => {
   const [total, setTotal] = useState<number>(0)
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  
 
   const fetchStats = useCallback(async (r: typeof range) => {
     try {
@@ -39,6 +40,7 @@ const CoatCheckPanel: React.FC = () => {
     fetchStats(range)
   }, [range, fetchStats])
 
+
   useEffect(() => {
     const onData = () => fetchStats(range)
     window.addEventListener('dataUpdated', onData)
@@ -48,7 +50,10 @@ const CoatCheckPanel: React.FC = () => {
   const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   
+
+  
   return (
+    <>
     <CardFrame className="clients-card">
       <div className="clients-total-panel">
         <div className="ctp-header">
@@ -61,7 +66,7 @@ const CoatCheckPanel: React.FC = () => {
           </div>
 
           <div className="ctp-range-frame ctp-range-under">
-            <div className="ctp-range-inner">
+            <div className="ctp-range-inner" style={{ ['--ctp-accent' as any]: '#FE2323' }}>
               {RANGES.map((r) => (
                 <button
                   key={r}
@@ -81,7 +86,10 @@ const CoatCheckPanel: React.FC = () => {
           </div>
         </div>
       </div>
-    </CardFrame>
+      </CardFrame>
+
+      {/* heatmap removed from coat check page per UX request */}
+    </>
   )
 }
 

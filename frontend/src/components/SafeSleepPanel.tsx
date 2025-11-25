@@ -60,7 +60,7 @@ const SafeSleepPanel: React.FC = () => {
           </div>
 
           <div className="ctp-range-frame ctp-range-under">
-            <div className="ctp-range-inner">
+            <div className="ctp-range-inner" style={{ ['--ctp-accent' as any]: '#5668E0' }}>
               {RANGES.map((r) => (
                 <button
                   key={r}

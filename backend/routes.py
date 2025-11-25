@@ -470,7 +470,8 @@ def register_routes(app):
             sanctuary_count = db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date >= start_date, SanctuaryRecord.date <= end_date).scalar() or 0
             clinic_count = db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= start_date, ClinicRecord.date <= end_date).scalar() or 0
             safe_sleep_count = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date >= start_date, SafeSleepRecord.date <= end_date).scalar() or 0
-            activity_count = db.session.query(func.count(Activity.activity_id)).filter(Activity.date >= start_date, Activity.date <= end_date).scalar() or 0
+            # activity_count should count attendance records (ClientActivity), not Activity definitions
+            activity_count = db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date >= start_date, ClientActivity.date <= end_date).scalar() or 0
 
             service_breakdown = {
                 'Coat Check': int(coat_check_count),
@@ -485,12 +486,14 @@ def register_routes(app):
 
             # prepare chart_data
             chart_data = []
+            chart_unique = []
             if time_range == 'day':
                 # include date-only services (Clinic, SafeSleep, Activity) into the current hour bucket
                 # compute today's totals for those services once and assign them to the bucket
                 clinic_today = db.session.query(func.count(ClinicRecord.clinic_id)).filter(func.date(ClinicRecord.date) == today).scalar() or 0
                 safe_sleep_today = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == today).scalar() or 0
-                activity_today = db.session.query(func.count(Activity.activity_id)).filter(Activity.date == today).scalar() or 0
+                # count client activity attendance for today (ClientActivity), not Activity definitions
+                activity_today = db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == today).scalar() or 0
 
                 # determine which hour bucket to put date-only records into (clamp to displayed hours 9-18)
                 current_hour = datetime.now().hour
@@ -500,11 +503,29 @@ def register_routes(app):
                     hour_start = datetime.combine(today, datetime.min.time().replace(hour=hour))
                     hour_end = hour_start + timedelta(hours=1)
                     hour_total = 0
+                    hour_unique_ids = set()
 
-                    # count records with explicit time_in in this hour
+                    # count records with explicit time_in in this hour (visitors)
                     hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in >= hour_start, WashroomRecord.time_in < hour_end).scalar() or 0
                     hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in >= hour_start, CoatCheckRecord.time_in < hour_end).scalar() or 0
                     hour_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.time_in >= hour_start, SanctuaryRecord.time_in < hour_end).scalar() or 0
+
+                    # collect distinct client ids for this hour (unique clients)
+                    try:
+                        rows = db.session.query(WashroomRecord.client_id).filter(WashroomRecord.time_in >= hour_start, WashroomRecord.time_in < hour_end).distinct().all()
+                        hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(CoatCheckRecord.client_id).filter(CoatCheckRecord.time_in >= hour_start, CoatCheckRecord.time_in < hour_end).distinct().all()
+                        hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(SanctuaryRecord.client_id).filter(SanctuaryRecord.time_in >= hour_start, SanctuaryRecord.time_in < hour_end).distinct().all()
+                        hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
 
                     # If some records only have a date (no time_in), include them in the current hour bucket
                     # so they affect the day view immediately. This covers Clinic, SafeSleep, Activity
@@ -513,6 +534,24 @@ def register_routes(app):
                         # clinic/safe_sleep/activity (date-only services)
                         hour_total += (clinic_today or 0) + (safe_sleep_today or 0) + (activity_today or 0)
 
+                        # include distinct client ids from date-only services for today into unique set
+                        try:
+                            rows = db.session.query(ClinicRecord.client_id).filter(func.date(ClinicRecord.date) == today).distinct().all()
+                            hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                        except Exception:
+                            pass
+                        try:
+                            rows = db.session.query(SafeSleepRecord.client_id).filter(SafeSleepRecord.date == today).distinct().all()
+                            hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                        except Exception:
+                            pass
+                        try:
+                            # collect client ids from client_activity attendances for today
+                            rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date == today).distinct().all()
+                            hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                        except Exception:
+                            pass
+
                         # also include any washroom/sanctuary/coatcheck rows where time_in is null but date == today
                         hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in == None, WashroomRecord.date == today).scalar() or 0
                         hour_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.time_in == None, CoatCheckRecord.date == today).scalar() or 0
@@ -520,18 +559,56 @@ def register_routes(app):
 
                     label = f"{hour}am" if hour < 12 else ("12pm" if hour == 12 else f"{hour-12}pm")
                     chart_data.append({'label': label, 'value': int(hour_total)})
+                    chart_unique.append({'label': label, 'value': int(len(hour_unique_ids))})
             elif time_range == 'week':
                 days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
                 for i in range(7):
                     day_date = start_date + timedelta(days=i)
                     day_total = 0
+                    day_unique_ids = set()
+                    # visitors counts
                     day_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == day_date).scalar() or 0
                     day_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == day_date).scalar() or 0
                     day_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
                     day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
                     day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
-                    day_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date == day_date).scalar() or 0
+                    # count attendance records for activities (ClientActivity)
+                    day_total += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == day_date).scalar() or 0
+
+                    # unique clients per day
+                    try:
+                        rows = db.session.query(WashroomRecord.client_id).filter(WashroomRecord.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(CoatCheckRecord.client_id).filter(CoatCheckRecord.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(SanctuaryRecord.client_id).filter(SanctuaryRecord.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(ClinicRecord.client_id).filter(ClinicRecord.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(SafeSleepRecord.client_id).filter(SafeSleepRecord.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date == day_date).distinct().all()
+                        day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+
                     chart_data.append({'label': days[i], 'value': int(day_total)})
+                    chart_unique.append({'label': days[i], 'value': int(len(day_unique_ids))})
             elif time_range == 'month':
                 # For the month view return every day so the x-axis shows all days
                 # The chart will show cumulative UNIQUE clients from the start of the month
@@ -539,12 +616,25 @@ def register_routes(app):
                 for i in range(0, days_in_month):
                     sample_date = start_date + timedelta(days=i)
                     client_ids = set()
-                    # collect distinct client ids from start_date up to and including sample_date
+                    # collect distinct client ids from start_date up to and including sample_date (unique)
                     for q in [WashroomRecord, CoatCheckRecord, SanctuaryRecord, ClinicRecord, SafeSleepRecord, ClientActivity]:
-                        rows = db.session.query(q.client_id).filter(q.date >= start_date, q.date <= sample_date).distinct().all()
-                        client_ids.update([r[0] for r in rows if r and r[0] is not None])
+                        try:
+                            rows = db.session.query(q.client_id).filter(q.date >= start_date, q.date <= sample_date).distinct().all()
+                            client_ids.update([r[0] for r in rows if r and r[0] is not None])
+                        except Exception:
+                            pass
 
-                    chart_data.append({'label': sample_date.strftime('%d'), 'value': int(len(client_ids))})
+                    # visitors per day (non-cumulative)
+                    day_visitors = 0
+                    day_visitors += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == sample_date).scalar() or 0
+
+                    chart_data.append({'label': sample_date.strftime('%d'), 'value': int(day_visitors)})
+                    chart_unique.append({'label': sample_date.strftime('%d'), 'value': int(len(client_ids))})
             elif time_range == 'year':
                 months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
                 for month in range(1,13):
@@ -554,15 +644,49 @@ def register_routes(app):
                     else:
                         month_end = (today.replace(month=month+1, day=1) - timedelta(days=1))
                     month_total = 0
+                    month_unique_ids = set()
                     month_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.date >= month_start, WashroomRecord.date <= month_end).scalar() or 0
                     month_total += db.session.query(func.count(CoatCheckRecord.check_id)).filter(CoatCheckRecord.date >= month_start, CoatCheckRecord.date <= month_end).scalar() or 0
                     month_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date >= month_start, SanctuaryRecord.date <= month_end).scalar() or 0
                     month_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= month_start, ClinicRecord.date <= month_end).scalar() or 0
                     month_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date >= month_start, SafeSleepRecord.date <= month_end).scalar() or 0
                     month_total += db.session.query(func.count(Activity.activity_id)).filter(Activity.date >= month_start, Activity.date <= month_end).scalar() or 0
-                    chart_data.append({'label': months[month-1], 'value': int(month_total)})
 
-            return jsonify({'success': True, 'total_clients': int(total_unique_clients), 'total_visitors': int(total_visitors), 'service_breakdown': service_breakdown, 'chart_data': chart_data}), 200
+                    try:
+                        rows = db.session.query(WashroomRecord.client_id).filter(WashroomRecord.date >= month_start, WashroomRecord.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(CoatCheckRecord.client_id).filter(CoatCheckRecord.date >= month_start, CoatCheckRecord.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(SanctuaryRecord.client_id).filter(SanctuaryRecord.date >= month_start, SanctuaryRecord.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(ClinicRecord.client_id).filter(ClinicRecord.date >= month_start, ClinicRecord.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(SafeSleepRecord.client_id).filter(SafeSleepRecord.date >= month_start, SafeSleepRecord.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+                    try:
+                        rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date >= month_start, ClientActivity.date <= month_end).distinct().all()
+                        month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
+                    except Exception:
+                        pass
+
+                    chart_data.append({'label': months[month-1], 'value': int(month_total)})
+                    chart_unique.append({'label': months[month-1], 'value': int(len(month_unique_ids))})
+
+            return jsonify({'success': True, 'total_clients': int(total_unique_clients), 'total_visitors': int(total_visitors), 'service_breakdown': service_breakdown, 'chart_data': chart_data, 'chart_unique': chart_unique}), 200
         except Exception as e:
             return jsonify({'success': False, 'message': 'Error fetching statistics', 'error': str(e)}), 500
 

@@ -60,7 +60,7 @@ const WashroomPanel: React.FC = () => {
           </div>
 
           <div className="ctp-range-frame ctp-range-under">
-            <div className="ctp-range-inner">
+            <div className="ctp-range-inner" style={{ ['--ctp-accent' as any]: '#6ECAEE' }}>
               {RANGES.map((r) => (
                 <button
                   key={r}

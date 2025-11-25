@@ -82,33 +82,39 @@
 }
 
 .ctp-range-inner {
-  /* Use intrinsic width so the right-side spacing equals gaps between items */
+  /* Visually match the TimeRangeSlider while keeping the same size */
   width: -moz-fit-content;
   width: fit-content;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: 26px; /* match TimeRangeSlider rounded look */
   border: 1px solid #717171;
   display: flex;
   gap: 12px; /* uniform gap between options */
-  background: transparent;
+  background: #FFFFFF;
   align-items: center;
   justify-content: flex-start;
+  position: relative;
+  box-sizing: border-box;
 }
 
 .ctp-range-btn {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-radius: 20px; /* pill-shaped like TimeRangeSlider */
   border: none;
   background: transparent;
   color: #8a8a8a;
   font-size: 12px;
   cursor: pointer;
   height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-
 .ctp-range-btn.active {
-  background: rgba(17,17,17,0.08);
+  /* make selected label darker for contrast when background is colored */
+  background: var(--ctp-accent, rgba(17,17,17,0.08));
   color: #111;
+  font-weight: 600;
 }
 
 .ctp-range-btn:focus {

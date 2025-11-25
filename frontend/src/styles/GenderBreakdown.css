@@ -1,0 +1,100 @@
+/* Gender Breakdown card styling - matches TotalVisitors frame sizing and card layout */
+.gender-breakdown-frame {
+	/* match TotalVisitors frame sizing */
+	padding-top: 20px;
+	padding-left: 15px;
+	padding-right: 15px;
+	padding-bottom: 24px;
+	min-height: 460px;
+	width: 100%;
+}
+
+.gender-breakdown-inner {
+	display: flex;
+	gap: 12px;
+	width: 100%;
+	align-items: center;
+	justify-content: center;
+	/* allow inner to fill card so centering vertically is possible */
+	flex: 1 1 auto;
+	height: 100%;
+}
+
+.gender-left {
+	flex: 1 1 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.gender-right {
+	flex: 1 1 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.gender-list {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	justify-content: center; /* vertical center the stacked rows */
+}
+
+.gender-row {
+	display: flex;
+	padding: 10px 14px;
+	justify-content: space-between;
+	align-items: flex-end;
+	align-self: stretch;
+	border-radius: 5px;
+	border: 1px solid #D2D2D2;
+	background: #fff;
+}
+
+.gender-left-label {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+}
+
+.gender-swatch {
+	width: 28px;
+	height: 28px;
+	border-radius: 5px;
+	flex: 0 0 auto;
+	border: 1px solid rgba(0,0,0,0.06);
+}
+
+.gender-name {
+	color: #5B5B5B;
+	font-family: "Satoshi Variable";
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 120%;
+	letter-spacing: -0.48px;
+}
+
+.gender-value {
+	color: #5B5B5B;
+	font-family: "Satoshi Variable";
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 120%;
+	letter-spacing: -0.48px;
+}
+
+/* small helper states */
+.gender-loading, .gender-error {
+	color: #777;
+	font-family: "Satoshi Variable";
+}
+
+@media (max-width: 768px) {
+	.gender-breakdown-inner { flex-direction: column; }
+	.gender-left, .gender-right { width: 100%; }
+}
+

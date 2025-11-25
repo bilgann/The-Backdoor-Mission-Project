@@ -43,8 +43,9 @@
 .new-button .plus{font-weight:700}
 
 /* Week navigation and day headers. Use a grid so day columns match the calendar grid. */
-.week-nav{display:flex;;gap:0px;margin-top:20px;padding:0;height:44px}
+.week-nav{display:flex;gap:0px;margin-top:20px;padding:0;height:44px;position:relative}
 .nav-btn{background:transparent;border:none;cursor:pointer}
+.nav-group{display:flex;gap:8px;align-items:center;position:absolute;left:0;top:50%;transform:translateY(-50%);padding-left:8px}
 .days-row{
 	display:grid;
 	grid-template-columns: repeat(5, 1fr);

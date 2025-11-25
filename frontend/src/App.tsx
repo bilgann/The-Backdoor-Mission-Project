@@ -12,7 +12,6 @@ import Clinic from './pages/Clinic'
 import SafeSleep from './pages/SafeSleep'
 import Activity from './pages/Activity'
 import GetClients from './pages/GetClients'
-import VisitorData from './pages/VisitorData'
 
 // Helper function to check if session has expired (1 hour = 3600000 ms)
 const isSessionValid = (): boolean => {
@@ -107,7 +106,6 @@ function App() {
                   <Route path="/safe-sleep" element={<SafeSleep />} />
                   <Route path="/activity" element={<Activity />} />
                   <Route path="/get-clients" element={<GetClients />} />
-                  <Route path="/visitor-data" element={<VisitorData />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -76,7 +76,7 @@
 }
 .departments-row {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   /* allow the departments row to take the remaining vertical space inside the card
      so the bar area can expand down to the inner card border without changing
      the outer frame size */
@@ -98,18 +98,22 @@
 /* Reduce inner bottom padding so bars can reach closer to the card stroke
    without changing the outer frame size. */
 .total-visitors-frame {
-  /* Match other cards' inner bottom padding so baselines align. Set bottom padding
-     equal to top padding (24px) so inner spacing is symmetric. This does not
-     change the outer card frame size. */
+  /* Inner padding: keep outer card size unchanged. Top/left/right adjusted per request. */
+  padding-top: 20px;
+  padding-left: 15px;
+  padding-right: 15px;
+  /* Keep existing bottom padding to preserve visual baseline alignment */
   padding-bottom: 24px;
   /* Match TotalClients card height so inner content extends similar distance */
   min-height: 460px;
 }
 
-/* Make visitors card slightly wider for improved layout */
+/* Make visitors card fill the visitors column so it can stretch to the right
+   edge of the main content inner container. The column sizing is handled in
+   `Home.css` so the card should use 100% width here. */
 .total-visitors-frame {
-  width: 480px;
-  max-width: 480px;
+  width: 100%;
+  max-width: none;
 }
 
 /* Ensure the inner container is positioned so the tooltip can be placed absolutely */
@@ -125,6 +129,9 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Match spacing used by TotalClients: keep 12px gap between header, range selector, and chart area */
+.total-visitors-inner { gap: 12px }
 
 /* Tooltip for showing record counts on hover */
 .tv-tooltip {
@@ -181,25 +188,37 @@
 .dept-bar-outer {
   width: 100%;
   /* Allow the outer bar container to expand within the column so bars can
-     fill remaining vertical space. Keep a reasonable minimum so bars are
-     visible, but do NOT change the outer card frame size. */
+     fill remaining vertical space. Increase min-height so thicker bars
+     have room to render and feel balanced within the card. */
   flex: 1 1 auto;
-  min-height: 120px;
+  min-height: 160px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 
 .dept-bar-inner {
-  width: 56px; /* wider bars */
+  /* Responsive thicker bars: scale between a sensible minimum and maximum
+    so the bars look substantial on wide screens but still fit small viewports. */
+  width: clamp(48px, 8vw, 96px);
   border-radius: 5px 5px 0 0;
   display: block;
   /* Fill the available outer container height so bars reach down to the
-     bottom of the inner content. Remove fixed visual transforms so height
-     reflects actual available space. */
+    bottom of the inner content. */
   height: 100%;
   max-height: none;
   box-sizing: border-box;
+}
+
+/* Numeric value under each service bar */
+.dept-value {
+  margin-top: 10px;
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 120%;
+  text-align: center;
 }
 
 /* Department labels should sit above the bar container area; reduce spacing */
@@ -219,4 +238,6 @@
   }
   .departments-row { gap: 8px; }
   .dept-column { width: auto; }
+
+  /* On small screens clamp already limits width; no further override needed */
 }

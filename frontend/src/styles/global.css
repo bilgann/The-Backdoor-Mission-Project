@@ -466,6 +466,18 @@ body {
   margin: 0;
 }
 
+/* Small page subtitle/label placed under page title (used on Analytics) */
+.page-sub-label {
+  color: #000;
+  font-family: "Satoshi Variable", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%; /* 24px */
+  letter-spacing: -0.6px;
+  margin: 0;
+}
+
 /* Legacy class for backward compatibility */
 .home-page {
   width: 100%;

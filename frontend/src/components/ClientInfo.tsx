@@ -29,8 +29,67 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch(`${config.API_BASE}/client/${id}`);
-            const data = await response.json();
+
+            // Fetch base client info
+            const resp = await fetch(`${config.API_BASE}/client/${id}`);
+            const data = await resp.json();
+
+            // Compute current month start/end for attendance query
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const startISO = monthStart.toISOString().slice(0, 10);
+            const endISO = monthEnd.toISOString().slice(0, 10);
+
+            // Fetch client activity attendance records for the month
+            const actResp = await fetch(`${config.API_BASE}/client_activity?client_id=${encodeURIComponent(id)}&start_date=${startISO}&end_date=${endISO}`);
+            const actJson = await actResp.json();
+            const activityRecords = Array.isArray(actJson) ? actJson : [];
+
+            // Calculate attendance count (number of attendance records in the month)
+            const attendanceCount = activityRecords.length;
+
+            // Build weekly totals (week starting Monday)
+            const weekTotals: Record<string, number> = {};
+            const getWeekStartISO = (isoDateStr: string) => {
+                const d = new Date(isoDateStr);
+                // normalize to local date (strip time)
+                const day = d.getDay(); // 0 = Sun, 1 = Mon ...
+                const diff = (day + 6) % 7; // days since Monday
+                const monday = new Date(d);
+                monday.setDate(d.getDate() - diff);
+                monday.setHours(0, 0, 0, 0);
+                return monday.toISOString().slice(0, 10);
+            };
+
+            for (const r of activityRecords) {
+                // r.date may be datetime string
+                const dateStr = r.date || r.date_iso || r.client_date || null;
+                if (!dateStr) continue;
+                const weekKey = getWeekStartISO(dateStr);
+                weekTotals[weekKey] = (weekTotals[weekKey] || 0) + 1;
+            }
+
+            // Sort week keys chronologically
+            const sortedWeeks = Object.keys(weekTotals).sort((a, b) => a.localeCompare(b));
+
+            // Compute percent change between consecutive weeks, then average them
+            const pctChanges: number[] = [];
+            for (let i = 1; i < sortedWeeks.length; i++) {
+                const prev = weekTotals[sortedWeeks[i - 1]] || 0;
+                const curr = weekTotals[sortedWeeks[i]] || 0;
+                let change = 0;
+                if (prev === 0) {
+                    change = curr === 0 ? 0 : 100; // treat 0->x as 100% increase for visualization
+                } else {
+                    change = ((curr - prev) / prev) * 100;
+                }
+                pctChanges.push(change);
+            }
+
+            const avgPct = pctChanges.length > 0 ? (pctChanges.reduce((s, v) => s + v, 0) / pctChanges.length) : 0;
+            const formattedDelta = sortedWeeks.length < 2 ? '—' : `${avgPct >= 0 ? '+' : ''}${avgPct.toFixed(2)} %`;
+
             if (data) {
                 setClientData({
                     clientId: String(data.client_id || id),
@@ -38,11 +97,12 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
                     nickname: data.nickname ?? null,
                     birth_year: data.birth_year ?? null,
                     gender: data.gender || "",
-                    attendance_count: data.attendance_count ?? undefined,
-                    attendance_delta: data.attendance_delta ?? undefined,
+                    attendance_count: attendanceCount,
+                    attendance_delta: formattedDelta,
                 });
             }
         } catch (e) {
+            console.error(e);
             setError("Failed to load client information");
         } finally {
             setLoading(false);
@@ -60,8 +120,8 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
         // show parent-provided details immediately
         if (clientId || clientName) {
             setClientData({ clientId, clientName, gender });
-            // if we have a clientId and need more details, fetch them
-            if (clientId && !gender) {
+            // if we have a clientId, fetch fuller client details (attendance)
+            if (clientId) {
                 fetchClientInfo(clientId);
             }
         }
@@ -69,6 +129,9 @@ const ClientInfo: React.FC<ClientInfoProps> = ({ clientId, clientName, gender })
 
     const DeltaPill: React.FC<{ delta?: string }> = ({ delta }) => {
         const text = delta ?? "+4.08 %";
+        if (text === '—') {
+            return <div className="ci-delta neutral">{text}</div>;
+        }
         const isNegative = typeof text === 'string' && text.trim().startsWith('-');
         const cls = isNegative ? 'ci-delta negative' : 'ci-delta positive';
         return <div className={cls}>{text}</div>;

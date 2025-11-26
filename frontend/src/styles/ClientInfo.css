@@ -103,6 +103,7 @@
 
 .ci-delta.positive { background: #87FF8F; color: #000; font-family: "Satoshi Variable"; font-size: 11px; font-style: normal; font-weight: 400; line-height: 120%; letter-spacing: -0.33px; }
 .ci-delta.negative { background: #FD6464; color: #5a0b0b; }
+.ci-delta.neutral { background: #F0F0F0; color: #333; font-family: "Satoshi Variable"; font-size: 11px; font-weight: 600; }
 
 /* small helper states */
 .loading-message,

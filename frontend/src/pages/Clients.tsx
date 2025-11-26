@@ -5,7 +5,7 @@ import config from "../config";
 import SearchBar from "../components/SearchBar";
 import RecordText from "../components/RecordText";
 import ResponsiveTable from "../components/ResponsiveTable";
-import ClientsTotalPanel from '../components/ClientsTotalPanel';
+import ClientsTotalPanel from "../components/ClientsTotalPanel";
 import ClientInfo from "../components/ClientInfo";
 import ClientForm from '../components/ClientForm';
 
@@ -88,7 +88,7 @@ const Clients: React.FC = () => {
             <h1 className="page-title">Clients</h1>
 
             <div className="number-of-clients-graph">
-                <ClientsTotalPanel />
+                <ClientsTotalPanel/>
             </div>
 
             <div className="clients-row">

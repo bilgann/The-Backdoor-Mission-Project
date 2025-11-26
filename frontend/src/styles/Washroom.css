@@ -106,7 +106,21 @@ select.cf-input:focus, select.cf-input:focus-visible {
 }
 
 @media (max-width: 900px) {
-	.washroom-row { flex-direction: column }
+	.washroom-row { 
+		flex-direction: column;
+	}
+	
+	/* Make washroom-right form full width on smaller screens */
+	.washroom-right {
+		flex: 1 1 100% !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	.washroom-right .client-form-card {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
 }
 
 /* Center the time-out button inside its cell without changing text flow */

@@ -95,7 +95,21 @@ input.no-spinner { -moz-appearance: textfield; }
 }
 
 @media (max-width: 900px) {
-	.coat-check-row { flex-direction: column }
+	.coat-check-row { 
+		flex-direction: column;
+	}
+	
+	/* Make coat-check-right form full width on smaller screens */
+	.coat-check-right {
+		flex: 1 1 100% !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	.coat-check-right .client-form-card {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
 }
 
 /* Center the time-out button inside its cell without changing text flow */

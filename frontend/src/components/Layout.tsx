@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import SideBar from './SideBar'
 
@@ -22,12 +22,33 @@ const Layout = ({ children }: LayoutProps) => {
         breadcrumbs.push({ name: pretty, path })
     })
 
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+
+    // Prevent body scroll when sidebar is open on mobile
+    useEffect(() => {
+        if (sidebarOpen && window.innerWidth <= 768) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [sidebarOpen])
+
     return (
-        <div className="main-layout">
-            <SideBar />
+        <div className={`main-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
+            <SideBar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <main className="main-content">
                 <div className="main-content-container">
                     <div className="top-bar">
+                        <button className="mobile-hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(s => !s)}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 6H21" stroke="#454545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M3 12H21" stroke="#454545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M3 18H21" stroke="#454545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
                         <div className="breadcrumb">
                             <svg className="breadcrumb-home-icon" width="16" height="16" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M1 6L6 1L11 6" stroke="#454545" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

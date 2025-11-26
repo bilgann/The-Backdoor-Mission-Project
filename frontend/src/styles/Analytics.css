@@ -7,3 +7,30 @@
     line-height: 120%; /* 28.8px */
     letter-spacing: -0.72px;
 }
+
+/* Make the spacer between the Coat Check panel and its heatmap exactly 12px.
+   Targets the direct child div inside `.coat-check-section` whose inline style contains `height`.
+   This avoids changing other elements in the section. */
+.coat-check-section > div[style*="height"] {
+    height: 12px !important;
+}
+
+/* Ensure the vertical gap between the AttendanceRecords card and the ActivityPanel is 12px */
+.activity-section > div[style*="margin"] {
+    margin-top: 12px !important;
+}
+
+/* Make the spacer between each panel and its heatmap exactly 12px for these sections */
+.washroom-section > div[style*="height"],
+.sanctuary-section > div[style*="height"],
+.safe-sleep-section > div[style*="height"],
+.clinic-section > div[style*="height"] {
+    height: 12px !important;
+}
+
+/* Make the gap between AttendanceRecords and ActivityPanel exactly 12px.
+   Targets the last direct child div inside .activity-section that uses inline marginTop. */
+.activity-section > div:last-child[style*="marginTop"] {
+    margin-top: 12px !important;
+}
+

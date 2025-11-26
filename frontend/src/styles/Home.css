@@ -22,7 +22,7 @@
 .visitors-column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* Layout: make left column a fixed width matching TotalClients card and allow
@@ -39,7 +39,7 @@
 .clients-column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .button-row {

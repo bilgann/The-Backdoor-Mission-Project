@@ -221,6 +221,31 @@
 /* place the card 20px below the Enter Record label for Clinic page */
 .clinic-right .client-form-card { margin-top: 20px; }
 
+/* Responsive adjustments for Clinic page - smaller screens */
+@media (max-width: 900px) {
+	.clinic-row { 
+		flex-direction: column;
+		min-height: auto;
+	}
+	
+	/* Make clinic-right form full width on smaller screens */
+	.clinic-right {
+		flex: 1 1 100% !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	.clinic-right .client-form-card {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	.clinic-left {
+		flex: 1 1 100% !important;
+		width: 100% !important;
+	}
+}
+
 /* Make recent table use full width in clinic left column */
 .clinic-left .recent-table-wrapper { width: 100% !important; max-width: 100% !important; overflow: visible; }
 

@@ -28,17 +28,12 @@ const Analytics = () => {
                 <div className="dashboard-widgets">
                     <div className="clients-column">
                         <TotalServicesUsed />
-
-                        <div style={{ marginTop: 8 }}>
-                            <UniqueClients />
-                        </div>
+                        <UniqueClients />
                     </div>
 
                     <div className="visitors-column">
                         <TotalVisitors />
-                        <div style={{ marginTop: 8 }}>
-                            <GenderBreakdown />
-                        </div>
+                        <GenderBreakdown />
                     </div>
                 </div>
             </div>
@@ -114,6 +109,38 @@ const Analytics = () => {
 
                         <div style={{ marginTop: 12 }}>
                             <SafeSleepHeatmap />
+                        </div>
+                    </CardFrame>
+
+                    {/* Weekly average occupancy card for Safe Sleep (Average Occupancy Rate) */}
+                    <div style={{ height: 12 }} />
+                    <CardFrame className="client-form-card occupancy-card">
+                        <div>
+                            <div style={{
+                                color: '#000',
+                                fontFamily: 'Satoshi Variable',
+                                fontSize: 20,
+                                fontStyle: 'normal',
+                                fontWeight: 400,
+                                lineHeight: '120%',
+                                letterSpacing: '-0.6px',
+                                marginBottom: 10
+                            }}>Average Occupancy Rate</div>
+
+                            <div style={{
+                                color: '#000',
+                                fontFamily: 'Satoshi Variable',
+                                fontSize: 32,
+                                fontStyle: 'normal',
+                                fontWeight: 400,
+                                lineHeight: '120%',
+                                letterSpacing: '-0.96px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10
+                            }}>
+                                <SafeSleepWeeklyAverageOccupancy />
+                            </div>
                         </div>
                     </CardFrame>
                 </div>
@@ -310,6 +337,65 @@ function SafeSleepHeatmap() {
 
     return (
         <Heatmap data={data} colorScale={["#D0D6FC","#8494FB","#6278F6","#3548B1","#2C3B9C"]} />
+    )
+}
+
+// small subcomponent to fetch and render the weekly average occupancy for Safe Sleep
+function SafeSleepWeeklyAverageOccupancy() {
+    const [pct, setPct] = useState<number | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        let cancelled = false
+        const fetchAvg = async () => {
+            setLoading(true)
+            try {
+                const resp = await fetch(`${config.API_BASE}/api/safe-sleep-statistics?range=week`)
+                const json = await resp.json()
+                if (!cancelled && json && json.success && Array.isArray(json.chart_data)) {
+                    // chart_data expected to be array of { label, value } for 7 days
+                    const values = json.chart_data.map((d: any) => Number(d.value) || 0)
+                    const sum = values.reduce((a: number, b: number) => a + b, 0)
+                    const avg = values.length ? (sum / values.length) : 0
+                    // occupancy rate = avg occupied beds / 20
+                    const rate = Math.round((avg / 20) * 100)
+                    setPct(rate)
+                } else if (!cancelled) {
+                    setPct(0)
+                }
+            } catch (e) {
+                if (!cancelled) setPct(0)
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        }
+        fetchAvg()
+        return () => { cancelled = true }
+    }, [])
+
+    if (loading || pct === null) return <span>—</span>
+
+    // choose color by thresholds matching SafeSleep page
+    let color = '#95F492'
+    if (pct > 25 && pct < 50) color = '#EDF373'
+    else if (pct >= 50 && pct <= 75) color = '#FFAB6B'
+    else if (pct > 75) color = '#FF2752'
+
+    return (
+        <>
+            <span>{pct}%</span>
+            <span
+                aria-hidden="true"
+                style={{
+                    display: 'inline-block',
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    background: color,
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.06) inset'
+                }}
+            />
+        </>
     )
 }
 

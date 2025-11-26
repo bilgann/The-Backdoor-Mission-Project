@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import blockIcon from '../assets/icons/block.svg'
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) => {
     const location = useLocation()
     const navigate = useNavigate()
 
@@ -65,11 +65,16 @@ const Sidebar = () => {
     }
 
     return (
-        <aside className="sidebar">
+        <>
+        <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
             <div className="sidebar-content">
                 {/* Logo and App Name */}
                 <div className="sidebar-logo-container">
-                    <div className="sidebar-logo"></div>
+                    <div className="sidebar-logo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 172 160" fill="none">
+                          <path d="M172 85.7611C172.069 117.364 155.083 145.008 129.719 160C111.838 149.295 102.351 136.092 105.111 129.391C106.09 127.014 109.163 123.071 112.847 121.07C114.705 120.061 117.717 118.502 121.554 116.837C128.129 113.986 130.85 113.566 135.154 110.724C138.189 108.722 142.661 105.773 142.309 102.403C142.087 100.256 140 98.7735 138.143 97.4593C135.353 95.4727 133.273 95.2663 129.818 94.0132C127.815 93.2874 126.454 93.2492 123.335 91.2854C122.54 90.7812 120.706 88.7487 120.729 87.8165V87.8012C120.507 85.3867 124.398 82.2004 129.657 81.0696L142.126 77.9598C132.394 78.6245 122.693 79.9846 112.97 80.6493C101.954 82.1775 96.3047 83.5147 96.0677 86.0438C95.9684 87.1135 96.8322 88.2749 98.6669 89.528C99.416 90.04 100.234 90.4602 101.06 90.8423C102.688 91.5834 105.486 93.2339 106.701 96.3666V96.3896C107.167 97.5892 106.946 98.9722 106.059 99.9196C97.7954 108.798 56.8288 112.099 56.8288 112.099C49.8036 112.573 36.8692 114.491 24.0647 123.148C19.7303 126.074 16.2292 129.222 13.4542 132.149C4.93831 118.808 0 102.953 0 85.9598C0 38.082 39.1396 -0.641972 87.1849 0.00750265C133.915 0.634055 171.893 39.0524 172 85.7611Z" fill="#393939"/>
+                        </svg>
+                    </div>
                     <h2 className="sidebar-app-name">The Backdoor Mission</h2>
                 </div>
 
@@ -91,6 +96,7 @@ const Sidebar = () => {
                                 key={link.name} 
                                 to={link.path}
                                 className={`menu-link ${location.pathname === link.path ? 'active' : ''}`}
+                                onClick={() => { if (onClose) onClose() }}
                             >
                                 {getIcon(link.icon)}
                                 {link.name}
@@ -107,6 +113,7 @@ const Sidebar = () => {
                                 to={link.path}
                                 className="data-entry-link"
                                 style={{ backgroundColor: link.color }}
+                                onClick={() => { if (onClose) onClose() }}
                             >
                                 <div className="data-entry-icon" style={{ backgroundColor: link.iconColor }}></div>
                                 {link.name}
@@ -116,7 +123,7 @@ const Sidebar = () => {
                 </nav>
 
                 {/* Logout Button */}
-                <button className="logout-button" onClick={handleLogout}>
+                <button className="logout-button" onClick={() => { handleLogout(); if (onClose) onClose(); }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
                         <path d="M13.3333 17.5V15.8333C13.3333 14.9493 12.9821 14.1014 12.357 13.4763C11.7319 12.8512 10.8841 12.5 10 12.5H4.16667C3.28261 12.5 2.43477 12.8512 1.80964 13.4763C1.18452 14.1014 0.833334 14.9493 0.833334 15.8333V17.5M19.1667 9.16667H14.1667M10.4167 5.83333C10.4167 7.67428 8.92428 9.16667 7.08333 9.16667C5.24238 9.16667 3.75 7.67428 3.75 5.83333C3.75 3.99238 5.24238 2.5 7.08333 2.5C8.92428 2.5 10.4167 3.99238 10.4167 5.83333Z" stroke="#FF7373" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
@@ -124,6 +131,8 @@ const Sidebar = () => {
                 </button>
             </div>
         </aside>
+        {mobileOpen ? <div className="sidebar-backdrop" onClick={() => onClose && onClose()} /> : null}
+        </>
     )
 }
 

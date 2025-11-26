@@ -24,6 +24,13 @@
   display: flex;
 }
 
+/* Ensure the chart container has a minimum height on small screens so Recharts
+   can compute a proper drawing area rather than collapsing to a tiny surface. */
+.total-clients-chart-fill .chart-container {
+  width: 100%;
+  min-height: 120px;
+}
+
 /* Allow chart to visually extend toward left edge of card (compensate card padding) */
 .total-clients-chart-fill {
   margin-left: -15px;
@@ -108,6 +115,7 @@
     width: 100%;
     max-width: 100%;
     padding: 16px;
+    height: auto;
   }
 
   .total-clients-title {
@@ -132,6 +140,7 @@
     width: 100%;
     max-width: 100%;
     padding: 12px;
+    height: auto;
     border-radius: 12px;
   }
 

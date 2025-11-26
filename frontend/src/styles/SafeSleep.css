@@ -17,8 +17,34 @@
     padding: 8px 12px !important;
 }
 
+/* Side-by-side layout for larger screens */
+.safe-sleep-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.safe-sleep-left {
+    flex: 1 1 65%;
+    min-width: 420px;
+}
+
+/* Ensure the Available Beds table uses the full width of the left column (match other pages) */
+.safe-sleep-left .recent-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible;
+}
+
+.safe-sleep-right {
+    flex: 0 0 34%;
+    max-width: 420px;
+}
+
 /* place the card 20px below the Enter Record label for Safe Sleep page */
-.safe-sleep-right .client-form-card { margin-top: 20px; }
+.safe-sleep-right .client-form-card { 
+    margin-top: 20px; 
+}
 
 .safe-sleep-occupied {
     border-radius: 20px !important;
@@ -63,24 +89,53 @@
 .safe-sleep-page .recent-table th:nth-child(2), .safe-sleep-page .recent-table td:nth-child(2) { width: 18%; }
 .safe-sleep-page .recent-table th:nth-child(3), .safe-sleep-page .recent-table td:nth-child(3) { width: 30%; }
 .safe-sleep-page .recent-table th:nth-child(4), .safe-sleep-page .recent-table td:nth-child(4) { width: 16%; }
-.safe-sleep-row {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-
-.safe-sleep-left {
-    flex: 1 1 65%;
-    min-width: 420px;
-}
-
-.safe-sleep-right {
-    flex: 0 0 34%;
-    max-width: 420px;
-}
-
 /* Column widths: bed_no small, name large, date small, occupied small */
 .safe-sleep-page .recent-table th:nth-child(1), .safe-sleep-page .recent-table td:nth-child(1) { width: 8%; }
 .safe-sleep-page .recent-table th:nth-child(2), .safe-sleep-page .recent-table td:nth-child(2) { width: 54%; }
 .safe-sleep-page .recent-table th:nth-child(3), .safe-sleep-page .recent-table td:nth-child(3) { width: 22%; }
 .safe-sleep-page .recent-table th:nth-child(4), .safe-sleep-page .recent-table td:nth-child(4) { width: 16%; }
+
+/* Responsive adjustments - stack vertically on smaller screens */
+@media (max-width: 900px) {
+    .safe-sleep-row {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .safe-sleep-left {
+        flex: 1 1 100%;
+        min-width: 0;
+        width: 100%;
+    }
+    
+    .safe-sleep-right {
+        flex: 1 1 100%;
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .safe-sleep-right .client-form-card {
+        margin-top: 16px;
+    }
+    
+    /* Make table full width on smaller screens */
+    .safe-sleep-left .recent-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    .safe-sleep-page .recent-table {
+        width: 100%;
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .safe-sleep-row {
+        gap: 20px;
+    }
+    
+    .safe-sleep-right .client-form-card {
+        margin-top: 12px;
+    }
+}

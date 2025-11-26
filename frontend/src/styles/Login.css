@@ -136,7 +136,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: #000;
+  background-color: transparent;
   flex-shrink: 0;
 }
 

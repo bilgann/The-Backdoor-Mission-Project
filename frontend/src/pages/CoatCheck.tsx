@@ -44,7 +44,7 @@ const CoatCheck: React.FC = () => {
             const mapped = (data || []).map((r: any) => ({
                 id: r.check_id,
                 name: clientMap[r.client_id] || `Client #${r.client_id}`,
-                bin_no: r.bin_no,
+                bin_no: Number(r.bin_no) || 0,
                 date: r.date,
                 time_in: formatTime(r.time_in),
                 time_out: r.time_out ? formatTime(r.time_out) : '',
@@ -52,13 +52,33 @@ const CoatCheck: React.FC = () => {
                 raw_time_out: r.time_out
             }))
 
-            mapped.sort((a: any, b: any) => {
-                const ta = a.raw_time_in ? new Date(a.raw_time_in).getTime() : 0
-                const tb = b.raw_time_in ? new Date(b.raw_time_in).getTime() : 0
-                return tb - ta
+            // Build 20 bin placeholders (1..20)
+            const bins: any[] = Array.from({ length: 20 }, (_, i) => ({
+                id: null,
+                name: '',
+                bin_no: i + 1,
+                date: '',
+                time_in: '',
+                time_out: '',
+                raw_time_in: null,
+                raw_time_out: null
+            }))
+
+            // Merge mapped records into placeholders by bin_no, but only keep active items (no time_out)
+            mapped.forEach((rec: any) => {
+                const bn = Number(rec.bin_no) || 0
+                if (bn >= 1 && bn <= 20) {
+                    // If item has been timed out (returned), skip it
+                    if (!rec.raw_time_out) {
+                        bins[bn - 1] = rec
+                    }
+                }
             })
 
-            setRows(mapped.slice(0, 10))
+            // ensure ascending order by bin_no
+            bins.sort((a: any, b: any) => (Number(a.bin_no) || 0) - (Number(b.bin_no) || 0))
+
+            setRows(bins)
         } catch (e) {
             setRows([])
         }
@@ -83,12 +103,12 @@ const CoatCheck: React.FC = () => {
                     <div className="recent-table-wrapper">
                         <ResponsiveTable
                             columns={[
-                                { key: 'name', label: 'Name' },
-                                { key: 'bin_no', label: 'Bin No' },
-                                { key: 'date', label: 'Date' },
-                                { key: 'time_in', label: 'Time In' },
-                                { key: 'time_out', label: 'Time Out' },
-                            ]}
+                                    { key: 'bin_no', label: 'Bin No' },
+                                    { key: 'name', label: 'Name' },
+                                    { key: 'date', label: 'Date' },
+                                    { key: 'time_in', label: 'Time In' },
+                                    { key: 'time_out', label: 'Time Out' },
+                                ]}
                             rows={rows}
                             noDataText={<RecordText>No recent data</RecordText> as any}
                             renderCell={(row, key) => {
@@ -97,8 +117,8 @@ const CoatCheck: React.FC = () => {
                                 if (key === 'date') return <RecordText>{row.date}</RecordText>
                                 if (key === 'time_in') return <RecordText>{row.time_in}</RecordText>
                                 if (key === 'time_out') {
-                                    // if no time_out yet, show the time-out button
-                                    if (!row.raw_time_out) {
+                                    // Show time-out button only for records that were just submitted
+                                    if (!row.raw_time_out && row.justSubmitted) {
                                         return (
                                             <ActionButton
                                                 onClick={async () => {
@@ -221,15 +241,17 @@ const CoatCheck: React.FC = () => {
                                                             const err = await res.json().catch(() => ({}))
                                                             console.error('Create coat check record error response:', err)
                                                             alert('Failed to create record: ' + (err.error || err.message || res.statusText))
-                                        } else {
-                                            // refresh rows
-                                            await fetchRows()
+                                                        } else {
+                                                            // refresh rows
+                                                            await fetchRows()
+                                                            // mark the submitted bin so timeout button can be shown for this new record
+                                                            setRows(prev => prev.map(r => (Number(r.bin_no) === Number(payload.bin_no) ? { ...r, justSubmitted: true } : r)))
                                                             // notify other components (totals, panels) to refresh
                                                             try { window.dispatchEvent(new Event('dataUpdated')) } catch (e) {}
-                                            // reset inputs
-                                            setSelectedClient(null)
-                                            setBinNo('')
-                                        }
+                                                            // reset inputs
+                                                            setSelectedClient(null)
+                                                            setBinNo('')
+                                                        }
                                     } catch (e) {
                                         alert('Failed to create record')
                                     } finally {

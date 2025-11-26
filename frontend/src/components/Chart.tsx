@@ -5,6 +5,7 @@
  * Uses recharts library for rendering.
  */
 
+import React, { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import '../styles/Chart.css'
 
@@ -25,10 +26,33 @@ const Chart = ({ data, height = 140, lineColor = '#95F492' }: ChartProps) => {
     const dataMax = values.length ? Math.max(...values) : 0
     const yMax = Math.max(1, dataMax) // ensure non-zero range
 
+    // Responsive scaling: reduce chart height on smaller screens when a numeric height is used
+    const [scaledHeight, setScaledHeight] = useState<number | string>(height)
+
+    useEffect(() => {
+        const compute = () => {
+            try {
+                const w = window.innerWidth
+                if (typeof height === 'number') {
+                    if (w <= 480) setScaledHeight(Math.max(80, Math.round(height * 0.6)))
+                    else if (w <= 768) setScaledHeight(Math.max(100, Math.round(height * 0.8)))
+                    else setScaledHeight(height)
+                } else {
+                    setScaledHeight(height)
+                }
+            } catch (e) {
+                setScaledHeight(height)
+            }
+        }
+        compute()
+        window.addEventListener('resize', compute)
+        return () => window.removeEventListener('resize', compute)
+    }, [height])
+
     return (
         <div className="chart-container">
             {/* height can be a number (px) or string (e.g. '100%') */}
-            <ResponsiveContainer width="100%" height={height as any}>
+            <ResponsiveContainer width="100%" height={scaledHeight as any}>
                 <LineChart 
                     data={data}
                     margin={{ top: 5, right: 0, left: -15, bottom: 5 }}

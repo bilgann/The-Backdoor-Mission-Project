@@ -35,12 +35,21 @@
 .sanctuary-page .recent-table tbody td:nth-child(6) {
 	text-align: center !important;
 	vertical-align: middle !important;
+	display: table-cell !important;
+}
+
+.sanctuary-page .recent-table tbody td:nth-child(6) > div {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 100% !important;
+	height: 100% !important;
 }
 
 .sanctuary-page .recent-table tbody td:nth-child(6) > .sanctuary-serviced,
 .sanctuary-page .recent-table tbody td:nth-child(5) > .sanctuary-timeout {
 	display: inline-block !important;
-	margin: 0 !important;
+	margin: 0 auto !important;
 	vertical-align: middle !important;
 }
 
@@ -71,8 +80,17 @@
 	padding: 8px 12px !important;
 }
 
+/* Layout styles for sanctuary-right form section */
+.sanctuary-right {
+	flex: 1 1 35%;
+	display: flex;
+	flex-direction: column;
+}
+
 /* place the card 20px below the Enter Record label for Sanctuary page */
-.sanctuary-right .client-form-card { margin-top: 20px; }
+.sanctuary-right .client-form-card { 
+	margin-top: 20px; 
+}
 
 /* Explicit column width hints so all 6 columns show and match app layout */
 .sanctuary-page .recent-table th:nth-child(1), .sanctuary-page .recent-table td:nth-child(1) { width: 32%; }
@@ -81,3 +99,51 @@
 .sanctuary-page .recent-table th:nth-child(4), .sanctuary-page .recent-table td:nth-child(4) { width: 12%; }
 .sanctuary-page .recent-table th:nth-child(5), .sanctuary-page .recent-table td:nth-child(5) { width: 12%; }
 .sanctuary-page .recent-table th:nth-child(6), .sanctuary-page .recent-table td:nth-child(6) { width: 10%; }
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 900px) {
+	/* Make sanctuary-right form full width on smaller screens */
+	.sanctuary-right {
+		flex: 1 1 100% !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	.sanctuary-right .client-form-card {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	
+	/* Ensure if serviced buttons are properly centered on smaller screens */
+	.sanctuary-page .recent-table tbody td:nth-child(6) {
+		text-align: center !important;
+		vertical-align: middle !important;
+		padding: 8px 4px !important;
+	}
+	
+	.sanctuary-page .recent-table tbody td:nth-child(6) > div {
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		width: 100% !important;
+		min-height: 100% !important;
+	}
+	
+	.sanctuary-page .recent-table tbody td:nth-child(6) > div > .sanctuary-serviced {
+		margin: 0 auto !important;
+		display: inline-block !important;
+	}
+}
+
+@media (max-width: 480px) {
+	/* Further adjustments for very small screens */
+	.sanctuary-page .recent-table tbody td:nth-child(6) {
+		padding: 6px 2px !important;
+	}
+	
+	.sanctuary-serviced {
+		padding: 5px 8px !important;
+		font-size: 10px !important;
+		min-width: 48px !important;
+	}
+}

@@ -173,12 +173,10 @@ class Activity(db.Model):
 
 class ClientActivity(db.Model):
     __tablename__ = "client_activity"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    client_activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    # optional satisfaction score 1-10
-    score = db.Column(db.Integer, nullable=True)
+    date = db.Column(db.DateTime, nullable=False)
     # optional satisfaction score 1-10
     score = db.Column(db.Integer, nullable=True)
 
@@ -319,11 +317,10 @@ class ActivitySchema(Schema):
     # color is a frontend-only UI preference and not stored server-side
 
 class ClientActivitySchema(Schema):
-    id = fields.Int(dump_only=True)
+    client_activity_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
     activity_id = fields.Int(required=True)
-    date = fields.Date(required=True)
-    score = fields.Int(required=False, allow_none=True, validate=validate.Range(min=1, max=10))
+    date = fields.DateTime(required=True)
     score = fields.Int(required=False, allow_none=True, validate=validate.Range(min=1, max=10))
 
 # ---------------- ROUTES ----------------
@@ -693,7 +690,7 @@ def create_activity():
 def create_client_activity():
     payload = request.json or {}
     # Defensive: remove any provided primary key so DB autoincrement can work
-    payload.pop('id', None)
+    payload.pop('client_activity_id', None)
     print(f"[DEBUG] create_client_activity payload cleaned: keys={list(payload.keys())}")
 
     try:
@@ -719,7 +716,7 @@ def create_client_activity():
         db.session.rollback()  
         return jsonify({"message": "Database error", "error": str(e)}), 500
     
-    return jsonify({"message": "Client activity created", "id": client_activity.id}), 201
+    return jsonify({"message": "Client activity created", "client_activity_id": client_activity.client_activity_id}), 201
 
 
 # GET requests to get records
@@ -1113,7 +1110,7 @@ def get_client_activity():
         client = Client.query.get(r.client_id)
         activity = Activity.query.get(r.activity_id)
         mapped.append({
-            'id': r.id,
+            'client_activity_id': r.client_activity_id,
             'client_id': r.client_id,
             'client_name': client.full_name if client else None,
             'activity_id': r.activity_id,
@@ -1123,15 +1120,15 @@ def get_client_activity():
         })
     return jsonify(mapped), 200
 
-@app.route("/client_activity/<int:id>", methods=["GET"])
-def get_client_activity_record(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["GET"])
+def get_client_activity_record(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
     client = Client.query.get(record.client_id)
     activity = Activity.query.get(record.activity_id)
     data = {
-        'id': record.id,
+        'client_activity_id': record.client_activity_id,
         'client_id': record.client_id,
         'client_name': client.full_name if client else None,
         'activity_id': record.activity_id,
@@ -1335,9 +1332,9 @@ def update_activity(activity_id):
     return jsonify({"message": "Activity updated"}), 200
 
 # update client activity
-@app.route("/client_activity/<int:id>", methods=["PUT"])
-def update_client_activity(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["PUT"])
+def update_client_activity(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
     payload = request.json
@@ -1490,9 +1487,9 @@ def delete_activity(activity_id):
     return jsonify({"message": "Activity deleted"}), 200
 
 # delete client activity record by id
-@app.route("/client_activity/<int:id>", methods=["DELETE"])
-def delete_client_activity(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["DELETE"])
+def delete_client_activity(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
 
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
@@ -1580,12 +1577,6 @@ def get_client_statistics():
         ).distinct().all()
         client_ids.update([c[0] for c in safe_sleep_clients])
 
-        activity_clients = db.session.query(ClientActivity.client_id).filter(
-            ClientActivity.date >= start_date,
-            ClientActivity.date <= end_date
-        ).distinct().all()
-        client_ids.update([c[0] for c in activity_clients])
-
         # total unique clients across service tables
         total_unique_clients = len(client_ids)
 
@@ -1616,12 +1607,6 @@ def get_client_statistics():
             func.date(SafeSleepRecord.date) <= end_date
         ).scalar() or 0
 
-        # Count activity attendance records (ClientActivity), not Activity definitions
-        activity_count = db.session.query(func.count(ClientActivity.id)).filter(
-            ClientActivity.date >= start_date,
-            ClientActivity.date <= end_date
-        ).scalar() or 0
-
         service_breakdown = {
             'Coat Check': int(coat_check_count),
             'Washroom': int(washroom_count),
@@ -1629,21 +1614,17 @@ def get_client_statistics():
             'Clinic': int(clinic_count),
             'Safe Sleep': int(safe_sleep_count)
         }
-        # include activities in breakdown
-        service_breakdown['Activity'] = int(activity_count)
         # total_visitors represents total service usages (sum of all service counts)
-        total_visitors = int(coat_check_count + washroom_count + sanctuary_count + clinic_count + safe_sleep_count + activity_count)
+        total_visitors = int(coat_check_count + washroom_count + sanctuary_count + clinic_count + safe_sleep_count)
         
         # Get hourly/daily/monthly data for the chart
         chart_data = []
         chart_unique = []
         
         if time_range == 'day':
-            # include date-only services (Clinic, SafeSleep, Activity) into the current hour bucket
+            # include date-only services (Clinic, SafeSleep) into the current hour bucket
             clinic_today = db.session.query(func.count(ClinicRecord.clinic_id)).filter(func.date(ClinicRecord.date) == today).scalar() or 0
             safe_sleep_today = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == today).scalar() or 0
-            # activity_today counts attendance records for today
-            activity_today = db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == today).scalar() or 0
 
             # determine which hour bucket to put date-only records into (clamp to displayed hours 9-18)
             current_hour = datetime.now().hour
@@ -1679,7 +1660,7 @@ def get_client_statistics():
 
                 # add date-only counts into the current hour bucket so they appear on the day chart
                 if hour == bucket_hour:
-                    hour_total += (clinic_today or 0) + (safe_sleep_today or 0) + (activity_today or 0)
+                    hour_total += (clinic_today or 0) + (safe_sleep_today or 0)
 
                     # also include any washroom/sanctuary/coatcheck rows where time_in is null but date == today
                     hour_total += db.session.query(func.count(WashroomRecord.washroom_id)).filter(WashroomRecord.time_in == None, WashroomRecord.date == today).scalar() or 0
@@ -1697,11 +1678,7 @@ def get_client_statistics():
                         hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
                     except Exception:
                         pass
-                    try:
-                        rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date == today).distinct().all()
-                        hour_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
-                    except Exception:
-                        pass
+                    # do not include ClientActivity (events) in stakeholder-facing unique counts
 
                 # Format hour label (9am, 10am, 11am, 12pm, 1pm, 2pm, etc.)
                 if hour < 12:
@@ -1729,8 +1706,7 @@ def get_client_statistics():
                 day_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == day_date).scalar() or 0
                 day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
                 day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
-                # count activity attendance records for the day
-                day_total += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == day_date).scalar() or 0
+                # (exclude activity attendance records from stakeholder-facing totals)
 
                 try:
                     rows = db.session.query(WashroomRecord.client_id).filter(WashroomRecord.date == day_date).distinct().all()
@@ -1757,11 +1733,7 @@ def get_client_statistics():
                     day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
                 except Exception:
                     pass
-                try:
-                    rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date == day_date).distinct().all()
-                    day_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
-                except Exception:
-                    pass
+                # do not include ClientActivity (events) in stakeholder-facing unique counts
 
                 chart_data.append({
                     'label': days[i],
@@ -1776,7 +1748,7 @@ def get_client_statistics():
             for i in range(0, days_in_month):
                 sample_date = start_date + timedelta(days=i)
                 client_ids_cum = set()
-                for q in [WashroomRecord, CoatCheckRecord, SanctuaryRecord, ClinicRecord, SafeSleepRecord, ClientActivity]:
+                for q in [WashroomRecord, CoatCheckRecord, SanctuaryRecord, ClinicRecord, SafeSleepRecord]:
                     try:
                         rows = db.session.query(q.client_id).filter(q.date >= start_date, q.date <= sample_date).distinct().all()
                         client_ids_cum.update([r[0] for r in rows if r and r[0] is not None])
@@ -1790,7 +1762,7 @@ def get_client_statistics():
                 day_visitors += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == sample_date).scalar() or 0
                 day_visitors += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == sample_date).scalar() or 0
                 day_visitors += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == sample_date).scalar() or 0
-                day_visitors += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == sample_date).scalar() or 0
+                # exclude ClientActivity from visitor counts shown to stakeholders
 
                 chart_data.append({
                     'label': sample_date.strftime('%d'),
@@ -1814,7 +1786,7 @@ def get_client_statistics():
                 month_total += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date >= month_start, SanctuaryRecord.date <= month_end).scalar() or 0
                 month_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= month_start, ClinicRecord.date <= month_end).scalar() or 0
                 month_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date >= month_start, SafeSleepRecord.date <= month_end).scalar() or 0
-                month_total += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date >= month_start, ClientActivity.date <= month_end).scalar() or 0
+                # exclude ClientActivity from stakeholder-facing monthly totals
 
                 month_unique_ids = set()
                 try:
@@ -1842,11 +1814,7 @@ def get_client_statistics():
                     month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
                 except Exception:
                     pass
-                try:
-                    rows = db.session.query(ClientActivity.client_id).filter(ClientActivity.date >= month_start, ClientActivity.date <= month_end).distinct().all()
-                    month_unique_ids.update([r[0] for r in rows if r and r[0] is not None])
-                except Exception:
-                    pass
+                # do not include ClientActivity in stakeholder-facing unique counts for months
 
                 chart_data.append({
                     'label': months[month - 1],
@@ -2690,10 +2658,10 @@ class Activity(db.Model):
 
 class ClientActivity(db.Model):
     __tablename__ = "client_activity"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    client_activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
 
 # ---------------- SCHEMAS ----------------
 class ClientSchema(Schema):
@@ -2804,10 +2772,10 @@ class ActivitySchema(Schema):
     date = fields.Date(required=True)
 
 class ClientActivitySchema(Schema):
-    id = fields.Int(dump_only=True)
+    client_activity_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
     activity_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    date = fields.DateTime(required=True)
 
 # ---------------- ROUTES ----------------
 # testing
@@ -3141,7 +3109,7 @@ def create_client_activity():
         db.session.rollback()  
         return jsonify({"message": "Database error", "error": str(e)}), 500
     
-    return jsonify({"message": "Client activity created", "id": client_activity.id}), 201
+    return jsonify({"message": "Client activity created", "client_activity_id": client_activity.client_activity_id}), 201
 
 
 # GET requests to get records
@@ -3461,7 +3429,7 @@ def get_client_activity():
         client = Client.query.get(r.client_id)
         activity = Activity.query.get(r.activity_id)
         mapped.append({
-            'id': r.id,
+            'client_activity_id': r.client_activity_id,
             'client_id': r.client_id,
             'client_name': client.full_name if client else None,
             'activity_id': r.activity_id,
@@ -3471,15 +3439,15 @@ def get_client_activity():
         })
     return jsonify(mapped), 200
 
-@app.route("/client_activity/<int:id>", methods=["GET"])
-def get_client_activity_record(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["GET"])
+def get_client_activity_record(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
     client = Client.query.get(record.client_id)
     activity = Activity.query.get(record.activity_id)
     data = {
-        'id': record.id,
+        'client_activity_id': record.client_activity_id,
         'client_id': record.client_id,
         'client_name': client.full_name if client else None,
         'activity_id': record.activity_id,
@@ -3683,9 +3651,9 @@ def update_activity(activity_id):
     return jsonify({"message": "Activity updated"}), 200
 
 # update client activity
-@app.route("/client_activity/<int:id>", methods=["PUT"])
-def update_client_activity(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["PUT"])
+def update_client_activity(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404
     payload = request.json
@@ -3827,9 +3795,9 @@ def delete_activity(activity_id):
     return jsonify({"message": "Activity deleted"}), 200
 
 # delete client activity record by id
-@app.route("/client_activity/<int:id>", methods=["DELETE"])
-def delete_client_activity(id):
-    record = ClientActivity.query.get(id)
+@app.route("/client_activity/<int:client_activity_id>", methods=["DELETE"])
+def delete_client_activity(client_activity_id):
+    record = ClientActivity.query.get(client_activity_id)
 
     if not record:
         return jsonify({"message": "Client activity record not found"}), 404

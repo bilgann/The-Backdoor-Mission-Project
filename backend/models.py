@@ -70,7 +70,7 @@ class Activity(db.Model):
 
 class ClientActivity(db.Model):
     __tablename__ = "client_activity"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    client_activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False)

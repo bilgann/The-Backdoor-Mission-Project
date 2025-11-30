@@ -3,7 +3,7 @@
 $root = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Push-Location $root
 try {
-    python .\backend\app.py
+    python .\backend\run.py
 } finally {
     Pop-Location
 }

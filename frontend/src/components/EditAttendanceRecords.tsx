@@ -32,7 +32,7 @@ type ActivityItem = {
 }
 
 type ClientActivity = {
-  id: number
+  client_activity_id: number
   client_id: number
   client_name?: string
   activity_id: number
@@ -139,7 +139,7 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
     for(const a of acts){
       const parts = participantsForActivity(a.activity_id)
       for(const p of parts){
-        drafts[p.id] = p.score !== undefined && p.score !== null ? String(p.score) : ''
+        drafts[p.client_activity_id] = p.score !== undefined && p.score !== null ? String(p.score) : ''
       }
     }
     console.log('startEdit', dayIdx, Object.keys(drafts).length, drafts)
@@ -153,7 +153,7 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
     for(const a of acts){
       const parts = participantsForActivity(a.activity_id)
       for(const p of parts){
-        delete drafts[p.id]
+        delete drafts[p.client_activity_id]
       }
     }
     setScoreDrafts(drafts)
@@ -168,7 +168,7 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
     }
     // dedupe by record id
     const uniq = new Map<number, ClientActivity>()
-    for(const p of participants) uniq.set(p.id, p)
+    for(const p of participants) uniq.set(p.client_activity_id, p)
 
     const updates: Promise<any>[] = []
     for(const [id, p] of uniq){
@@ -300,7 +300,7 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
                                 {participantsForActivity(act.activity_id).length === 0 ? (
                                   <tr><td colSpan={4} style={{paddingLeft:12, color:'#777'}}>No attendees</td></tr>
                                 ) : participantsForActivity(act.activity_id).map(p => (
-                                  <tr key={p.id}>
+                                  <tr key={p.client_activity_id}>
                                     <td style={{paddingLeft:12}}>{act.activity_name}</td>
                                     <td>{p.client_name ?? `#${p.client_id}`}</td>
                                     <td>{new Date(p.date).toLocaleString()}</td>
@@ -311,10 +311,10 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
                                           type="number"
                                           min={1}
                                           max={10}
-                                          value={scoreDrafts[p.id] ?? (p.score !== undefined && p.score !== null ? String(p.score) : '')}
-                                          onChange={(e)=>{ const v = (e.target as HTMLInputElement).value; setScoreDrafts({ ...scoreDrafts, [p.id]: v }) }}
-                                          onFocus={() => console.log('score input focus', p.id)}
-                                          onClick={() => console.log('score input click', p.id)}
+                                          value={scoreDrafts[p.client_activity_id] ?? (p.score !== undefined && p.score !== null ? String(p.score) : '')}
+                                          onChange={(e)=>{ const v = (e.target as HTMLInputElement).value; setScoreDrafts({ ...scoreDrafts, [p.client_activity_id]: v }) }}
+                                          onFocus={() => console.log('score input focus', p.client_activity_id)}
+                                          onClick={() => console.log('score input click', p.client_activity_id)}
                                           style={{pointerEvents:'auto'}}
                                         />
                                       ) : (

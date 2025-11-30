@@ -100,7 +100,7 @@ class ActivitySchema(Schema):
 
 
 class ClientActivitySchema(Schema):
-    id = fields.Int(dump_only=True)
+    client_activity_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
     activity_id = fields.Int(required=True)
     date = fields.DateTime(required=True)

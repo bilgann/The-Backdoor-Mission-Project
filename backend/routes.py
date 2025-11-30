@@ -318,7 +318,7 @@ def register_routes(app):
     def create_client_activity():
         payload = request.json or {}
         # Defensive: remove any provided primary key so DB autoincrement can work
-        payload.pop('id', None)
+        payload.pop('client_activity_id', None)
         print(f"[DEBUG routes] create_client_activity payload keys: {list(payload.keys())}")
         try:
             data = ClientActivitySchema().load(payload)
@@ -347,7 +347,7 @@ def register_routes(app):
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": "Database error", "error": str(e)}), 500
-        return jsonify({"message": "Client activity created", "id": client_activity.id}), 201
+        return jsonify({"message": "Client activity created", "client_activity_id": client_activity.client_activity_id}), 201
 
     # GET endpoints (examples and stats)
     @app.route('/api/clients', methods=['GET'])
@@ -471,7 +471,7 @@ def register_routes(app):
             clinic_count = db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date >= start_date, ClinicRecord.date <= end_date).scalar() or 0
             safe_sleep_count = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date >= start_date, SafeSleepRecord.date <= end_date).scalar() or 0
             # activity_count should count attendance records (ClientActivity), not Activity definitions
-            activity_count = db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date >= start_date, ClientActivity.date <= end_date).scalar() or 0
+            activity_count = db.session.query(func.count(ClientActivity.client_activity_id)).filter(ClientActivity.date >= start_date, ClientActivity.date <= end_date).scalar() or 0
 
             service_breakdown = {
                 'Coat Check': int(coat_check_count),
@@ -493,7 +493,7 @@ def register_routes(app):
                 clinic_today = db.session.query(func.count(ClinicRecord.clinic_id)).filter(func.date(ClinicRecord.date) == today).scalar() or 0
                 safe_sleep_today = db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == today).scalar() or 0
                 # count client activity attendance for today (ClientActivity), not Activity definitions
-                activity_today = db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == today).scalar() or 0
+                activity_today = db.session.query(func.count(ClientActivity.client_activity_id)).filter(ClientActivity.date == today).scalar() or 0
 
                 # determine which hour bucket to put date-only records into (clamp to displayed hours 9-18)
                 current_hour = datetime.now().hour
@@ -573,7 +573,7 @@ def register_routes(app):
                     day_total += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == day_date).scalar() or 0
                     day_total += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == day_date).scalar() or 0
                     # count attendance records for activities (ClientActivity)
-                    day_total += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == day_date).scalar() or 0
+                    day_total += db.session.query(func.count(ClientActivity.client_activity_id)).filter(ClientActivity.date == day_date).scalar() or 0
 
                     # unique clients per day
                     try:
@@ -631,7 +631,7 @@ def register_routes(app):
                     day_visitors += db.session.query(func.count(SanctuaryRecord.sanctuary_id)).filter(SanctuaryRecord.date == sample_date).scalar() or 0
                     day_visitors += db.session.query(func.count(ClinicRecord.clinic_id)).filter(ClinicRecord.date == sample_date).scalar() or 0
                     day_visitors += db.session.query(func.count(SafeSleepRecord.sleep_id)).filter(SafeSleepRecord.date == sample_date).scalar() or 0
-                    day_visitors += db.session.query(func.count(ClientActivity.id)).filter(ClientActivity.date == sample_date).scalar() or 0
+                    day_visitors += db.session.query(func.count(ClientActivity.client_activity_id)).filter(ClientActivity.date == sample_date).scalar() or 0
 
                     chart_data.append({'label': sample_date.strftime('%d'), 'value': int(day_visitors)})
                     chart_unique.append({'label': sample_date.strftime('%d'), 'value': int(len(client_ids))})

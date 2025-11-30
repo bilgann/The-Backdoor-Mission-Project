@@ -14,7 +14,7 @@ type ActivityItem = {
 }
 
 type ClientActivity = {
-  id: number
+  client_activity_id: number
   client_id: number
   client_name?: string
   activity_id: number
@@ -152,7 +152,7 @@ const AttendanceRecords: React.FC<Props> = ({ weekStart, refreshToken }) => {
                           {parts.length === 0 ? (
                             <tr key={`pempty-${it.activity_id}`}><td colSpan={3} style={{padding:'6px 12px', color:'#777'}}>No attendees</td></tr>
                           ) : parts.map(p => (
-                            <tr key={`p-${p.id}`}>
+                            <tr key={`p-${p.client_activity_id}`}>
                               <td style={{paddingLeft:20}}>{p.activity_name}</td>
                               <td>{p.client_name ?? `Client #${p.client_id}`}</td>
                               <td>{p.score ?? '-'}</td>

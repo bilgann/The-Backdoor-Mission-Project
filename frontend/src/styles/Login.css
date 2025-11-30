@@ -127,8 +127,9 @@
 
 .login-footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 16px;
 }
 
@@ -141,12 +142,53 @@
 }
 
 .footer-text {
-  color: #000;
+  color: #393939;
   font-family: "Satoshi Variable", sans-serif;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
+}
+
+.footer-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.bilgan-logo-img {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  object-fit: contain;
+  filter: grayscale(100%) brightness(40%);
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.footer-logo svg path {
+  fill: #393939;
+}
+
+.copyright-symbol {
+  color: #6b6b6b;
+  font-size: 12px;
+}
+
+.copyright-text {
+  color: #6b6b6b;
+  font-size: 12px;
 }
 
 @media (max-width: 480px) {

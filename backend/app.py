@@ -107,78 +107,86 @@ def fix_schema_constraints():
 fix_schema_constraints()
 
 # ---------------- MODELS ----------------
-class Client(db.Model):
-    __tablename__ = "client"
-    client_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    full_name = db.Column(db.String(255), nullable=False)
-    gender = db.Column(db.String(2), nullable=True)
-    # optional secondary identifiers to help disambiguate clients
-    nickname = db.Column(db.String(255), nullable=True)
-    birth_year = db.Column(db.Integer, nullable=True)
+if 'Client' not in globals():
+    class Client(db.Model):
+        __tablename__ = "client"
+        client_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        full_name = db.Column(db.String(255), nullable=False)
+        gender = db.Column(db.String(2), nullable=True)
+        # optional secondary identifiers to help disambiguate clients
+        nickname = db.Column(db.String(255), nullable=True)
+        birth_year = db.Column(db.Integer, nullable=True)
 
-class WashroomRecord(db.Model):
-    __tablename__ = "washroom_records"
-    washroom_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    washroom_type = db.Column(db.String(1), nullable=False) 
-    time_in = db.Column(db.DateTime, nullable=False)
-    time_out = db.Column(db.DateTime, nullable=True)
-    date = db.Column(db.Date, nullable=False)
+if 'WashroomRecord' not in globals():
+    class WashroomRecord(db.Model):
+        __tablename__ = "washroom_records"
+        washroom_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        washroom_type = db.Column(db.String(1), nullable=False) 
+        time_in = db.Column(db.DateTime, nullable=False)
+        time_out = db.Column(db.DateTime, nullable=True)
+        date = db.Column(db.Date, nullable=False)
 
-class CoatCheckRecord(db.Model):
-    __tablename__ = "coat_check_records"
-    check_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    bin_no = db.Column(db.Integer, nullable=False)
-    time_in = db.Column(db.DateTime, nullable=False)
-    time_out = db.Column(db.DateTime, nullable=True)
-    date = db.Column(db.Date, nullable=False)
+if 'CoatCheckRecord' not in globals():
+    class CoatCheckRecord(db.Model):
+        __tablename__ = "coat_check_records"
+        check_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        bin_no = db.Column(db.Integer, nullable=False)
+        time_in = db.Column(db.DateTime, nullable=False)
+        time_out = db.Column(db.DateTime, nullable=True)
+        date = db.Column(db.Date, nullable=False)
 
-class SanctuaryRecord(db.Model):
-    __tablename__ = "sanctuary_records"
-    sanctuary_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    time_in = db.Column(db.DateTime, nullable=False)
-    time_out = db.Column(db.DateTime, nullable=True)
-    purpose_of_visit = db.Column(db.Text, nullable=True)
-    if_serviced = db.Column(db.Boolean, nullable=False, default=False)
+if 'SanctuaryRecord' not in globals():
+    class SanctuaryRecord(db.Model):
+        __tablename__ = "sanctuary_records"
+        sanctuary_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        date = db.Column(db.Date, nullable=False)
+        time_in = db.Column(db.DateTime, nullable=False)
+        time_out = db.Column(db.DateTime, nullable=True)
+        purpose_of_visit = db.Column(db.Text, nullable=True)
+        if_serviced = db.Column(db.Boolean, nullable=False, default=False)
 
-class ClinicRecord(db.Model):
-    __tablename__ = "clinic_records"
-    clinic_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    purpose_of_visit = db.Column(db.Text, nullable=True)
+if 'ClinicRecord' not in globals():
+    class ClinicRecord(db.Model):
+        __tablename__ = "clinic_records"
+        clinic_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        date = db.Column(db.Date, nullable=False)
+        purpose_of_visit = db.Column(db.Text, nullable=True)
 
-class SafeSleepRecord(db.Model):
-    __tablename__ = "safe_sleep_records"
-    sleep_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    bed_no = db.Column(db.Integer, nullable=True)
-    is_occupied = db.Column(db.Boolean, nullable=False, default=False)
-    # store full datetime so we can record the time the bed was occupied
-    date = db.Column(db.DateTime, nullable=False)
+if 'SafeSleepRecord' not in globals():
+    class SafeSleepRecord(db.Model):
+        __tablename__ = "safe_sleep_records"
+        sleep_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        bed_no = db.Column(db.Integer, nullable=True)
+        is_occupied = db.Column(db.Boolean, nullable=False, default=False)
+        # store full datetime so we can record the time the bed was occupied
+        date = db.Column(db.DateTime, nullable=False)
 
-class Activity(db.Model):
-    __tablename__ = "activity_records"
-    activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    activity_name = db.Column(db.String(255), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    # optional start/end times for calendar placement
-    start_time = db.Column(db.DateTime, nullable=True)
-    end_time = db.Column(db.DateTime, nullable=True)
-    # attendance count for the event
-    attendance = db.Column(db.Integer, nullable=False, default=0)
+if 'Activity' not in globals():
+    class Activity(db.Model):
+        __tablename__ = "activity_records"
+        activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        activity_name = db.Column(db.String(255), nullable=False)
+        date = db.Column(db.Date, nullable=False)
+        # optional start/end times for calendar placement
+        start_time = db.Column(db.DateTime, nullable=True)
+        end_time = db.Column(db.DateTime, nullable=True)
+        # attendance count for the event
+        attendance = db.Column(db.Integer, nullable=False, default=0)
 
-class ClientActivity(db.Model):
-    __tablename__ = "client_activity"
-    client_activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
-    date = db.Column(db.DateTime, nullable=False)
-    # optional satisfaction score 1-10
-    score = db.Column(db.Integer, nullable=True)
+if 'ClientActivity' not in globals():
+    class ClientActivity(db.Model):
+        __tablename__ = "client_activity"
+        client_activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
+        activity_id = db.Column(db.Integer, db.ForeignKey('activity_records.activity_id'), nullable=False)
+        date = db.Column(db.DateTime, nullable=False)
+        # optional satisfaction score 1-10
+        score = db.Column(db.Integer, nullable=True)
 
 # ---------------- SCHEMAS ----------------
 class ClientSchema(Schema):

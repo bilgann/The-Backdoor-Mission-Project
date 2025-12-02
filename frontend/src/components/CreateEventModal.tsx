@@ -5,8 +5,14 @@ import '../styles/Activity.css'
 type Props = { onClose: ()=>void, existingEvent?: any, onSaved?: () => void }
 
 const CreateEventModal: React.FC<Props> = ({ onClose, existingEvent, onSaved }) => {
+  function formatDateLocal(d: Date){
+    const y = d.getFullYear()
+    const m = String(d.getMonth()+1).padStart(2,'0')
+    const dd = String(d.getDate()).padStart(2,'0')
+    return `${y}-${m}-${dd}`
+  }
   const [activityName, setActivityName] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0,10))
+  const [date, setDate] = useState(formatDateLocal(new Date()))
   const [startTime, setStartTime] = useState('13:00')
   const [endTime, setEndTime] = useState('14:00')
   const [attendance, setAttendance] = useState(0)

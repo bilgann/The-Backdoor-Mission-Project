@@ -153,7 +153,8 @@ if 'ClinicRecord' not in globals():
         __tablename__ = "clinic_records"
         clinic_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
         client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-        date = db.Column(db.Date, nullable=False)
+        # store full datetime so frontend can display exact hour/minute
+        date = db.Column(db.DateTime, nullable=False)
         purpose_of_visit = db.Column(db.Text, nullable=True)
 
 if 'SafeSleepRecord' not in globals():
@@ -266,7 +267,8 @@ class ClinicSchema(Schema):
     # make date optional on the payload so clients in different timezones
     # don't accidentally send a date that the server considers "in the future".
     # We'll default/normalize on the server side in the route handler.
-    date = fields.Date(required=False)
+    # Accept a full datetime so we can preserve hour/minute
+    date = fields.DateTime(required=False)
     purpose_of_visit = fields.Str(required=False, validate=validate.Length(min=1))
 
     @validates('date')
@@ -586,20 +588,44 @@ def create_sanctuary_record():
 def create_clinic_record():
     payload = request.json
 
+    # Defensive: accept flexible date formats from frontend (ISO datetimes etc.)
+    try:
+        from dateutil import parser as _dateutil_parser
+        if payload and isinstance(payload.get('date'), str):
+            try:
+                parsed_dt = _dateutil_parser.parse(payload['date'])
+                # Keep full datetime so we preserve the user's submitted hour/minute
+                payload['date'] = parsed_dt
+            except Exception:
+                # leave as-is and let marshmallow report if invalid
+                pass
+    except Exception:
+        # dateutil may be unavailable; continue and let marshmallow validate
+        pass
+
     try:
         data = ClinicSchema().load(payload)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
-    # ensure date/time is present; use current server time if missing
+
+    # ensure date/time is present; use current server datetime if missing
     from datetime import datetime
     if not data.get('date'):
         data['date'] = datetime.now()
     else:
         try:
-            # if client submitted a future datetime (clock skew), clamp to now
-            if data['date'] > datetime.now():
-                data['date'] = datetime.now()
+            # If the client provided an aware datetime, convert to local naive for storage
+            dt_val = data['date']
+            tzinfo = getattr(dt_val, 'tzinfo', None)
+            if tzinfo is not None:
+                try:
+                    dt_val = dt_val.astimezone().replace(tzinfo=None)
+                except Exception:
+                    dt_val = dt_val.replace(tzinfo=None)
+            # clamp future datetimes to now to avoid future timestamps
+            if dt_val > datetime.now():
+                dt_val = datetime.now()
+            data['date'] = dt_val
         except Exception:
             data['date'] = datetime.now()
     
@@ -699,32 +725,40 @@ def create_client_activity():
     payload = request.json or {}
     # Defensive: remove any provided primary key so DB autoincrement can work
     payload.pop('client_activity_id', None)
-    print(f"[DEBUG] create_client_activity payload cleaned: keys={list(payload.keys())}")
+    print(f"[DEBUG] create_client_activity incoming payload keys: {list(payload.keys())}")
+    print(f"[DEBUG] create_client_activity incoming payload sample: {payload}")
 
     try:
-        data = ClientActivitySchema().load(payload)
+        # Attempt to marshal the payload but ignore provided `date` — use server time
+        data = ClientActivitySchema().load(payload, partial=True)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
-    
-    # ensure client exists
-    client = Client.query.get(data["client_id"])
+
+    # Ensure client exists
+    client = Client.query.get(data.get("client_id") or payload.get('client_id'))
     if not client:
         return jsonify({"message": "Client not found"}), 404
-    
-    # ensure activity exists
-    activity = Activity.query.get(data["activity_id"])
+
+    # Ensure activity exists
+    activity = Activity.query.get(data.get("activity_id") or payload.get('activity_id'))
     if not activity:
         return jsonify({"message": "Activity not found"}), 404
-    
+
+    # Override any client-supplied date with server's current local time to avoid
+    # timezone-related day-shifts when the browser sends UTC timestamps.
+    from datetime import datetime
+    data['date'] = datetime.now()
+
     client_activity = ClientActivity(**data)
     try:
         db.session.add(client_activity)
         db.session.commit()
+        print(f"[DEBUG] created client_activity id={client_activity.client_activity_id} date={client_activity.date}")
     except Exception as e:
         db.session.rollback()  
         return jsonify({"message": "Database error", "error": str(e)}), 500
-    
-    return jsonify({"message": "Client activity created", "client_activity_id": client_activity.client_activity_id}), 201
+
+    return jsonify({"message": "Client activity created", "client_activity_id": client_activity.client_activity_id, "date": client_activity.date.isoformat()}), 201
 
 
 # GET requests to get records
@@ -2646,7 +2680,8 @@ class ClinicRecord(db.Model):
     __tablename__ = "clinic_records"
     clinic_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.client_id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    # store full datetime so frontend can display exact hour/minute
+    date = db.Column(db.DateTime, nullable=False)
     purpose_of_visit = db.Column(db.Text, nullable=True)
 
 class SafeSleepRecord(db.Model):
@@ -2745,13 +2780,22 @@ class SanctuarySchema(Schema):
 class ClinicSchema(Schema):
     clinic_id = fields.Int(dump_only=True)
     client_id = fields.Int(required=True)
-    date = fields.Date(required=True)
+    # Accept datetimes so we preserve submitted time
+    date = fields.DateTime(required=True)
     purpose_of_visit = fields.Str(required=False, validate=validate.Length(min=1))
 
     @validates('date')
     def validate_date(self, value, **kwargs):
-        if value > date.today():
-            raise ValidationError("date cannot be in the future")
+        try:
+            if hasattr(value, 'date'):
+                cmp = value.date()
+            else:
+                cmp = value
+            if cmp > date.today():
+                raise ValidationError("date cannot be in the future")
+        except Exception:
+            # let marshmallow handle unexpected types
+            pass
 
 class SafeSleepSchema(Schema):
     sleep_id = fields.Int(dump_only=True)
@@ -3004,15 +3048,47 @@ def create_sanctuary_record():
 @app.route("/clinic_records", methods=["POST"])
 def create_clinic_record():
     payload = request.json
+    # Defensive: accept flexible date formats and preserve time when provided
+    try:
+        if payload is None:
+            payload = {}
+        if isinstance(payload.get('date'), str):
+            try:
+                from dateutil import parser as _dateutil_parser
+                dt = _dateutil_parser.parse(payload['date'])
+                # keep ISO string with time so marshmallow DateTime can parse it
+                payload['date'] = dt.isoformat()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # If no date provided, default to server now (ISO string)
+    try:
+        if not payload.get('date'):
+            payload['date'] = datetime.now().isoformat()
+    except Exception:
+        payload['date'] = datetime.now().isoformat()
 
     try:
         data = ClinicSchema().load(payload)
     except ValidationError as err:
-        return jsonify({"errors": err.messages}), 400
-    
-    # check if data is valid and not in the future
-    if data["date"] > date.today():
-        return jsonify({"message": "date cannot be in the future"}), 400
+        debug_info = {
+            'received_date': payload.get('date'),
+            'received_date_type': type(payload.get('date')).__name__ if payload.get('date') is not None else None
+        }
+        resp = {"errors": err.messages, "debug": debug_info}
+        print(f"[DEBUG app] create_clinic_record validation failed: {resp}")
+        return jsonify(resp), 400
+
+    # ensure date is not in the future (compare date portion)
+    try:
+        dtval = data.get('date')
+        cmp_date = dtval.date() if hasattr(dtval, 'date') else dtval
+        if cmp_date > datetime.now().date():
+            return jsonify({"message": "date cannot be in the future"}), 400
+    except Exception:
+        pass
     
     # ensure client exists
     client = Client.query.get(data["client_id"])
@@ -3423,11 +3499,13 @@ def get_client_activity():
 
     try:
         if start:
-            sd = datetime.fromisoformat(start).date()
-            query = query.filter(ClientActivity.date >= sd)
+            # interpret start as YYYY-MM-DD and use start of day
+            sd_dt = datetime.fromisoformat(start).replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(ClientActivity.date >= sd_dt)
         if end:
-            ed = datetime.fromisoformat(end).date()
-            query = query.filter(ClientActivity.date <= ed)
+            # interpret end as YYYY-MM-DD and use end of day
+            ed_dt = datetime.fromisoformat(end).replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(ClientActivity.date <= ed_dt)
     except Exception:
         return jsonify({'message': 'Invalid date format for start_date/end_date, use YYYY-MM-DD'}), 400
 

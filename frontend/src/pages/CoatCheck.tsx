@@ -117,8 +117,8 @@ const CoatCheck: React.FC = () => {
                                 if (key === 'date') return <RecordText>{row.date}</RecordText>
                                 if (key === 'time_in') return <RecordText>{row.time_in}</RecordText>
                                 if (key === 'time_out') {
-                                    // Show time-out button only for records that were just submitted
-                                    if (!row.raw_time_out && row.justSubmitted) {
+                                    // Show time-out button for active records (have id and no time_out)
+                                        if (row.id && !row.raw_time_out) {
                                         return (
                                             <ActionButton
                                                 onClick={async () => {

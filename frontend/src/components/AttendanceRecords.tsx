@@ -28,11 +28,28 @@ const dayColors = ['#27608F','#FC8C37','#F6254F','#C3E4FF','#C3FFD7']
 
 function parseISODateToLocal(dstr: string){
   if(!dstr) return new Date(dstr)
-  const parts = dstr.split('-').map(p=>Number(p))
-  if(parts.length >= 3){
-    return new Date(parts[0], parts[1]-1, parts[2])
-  }
+  try{
+    // date-only (YYYY-MM-DD)
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+      const parts = dstr.split('-').map(p=>Number(p))
+      return new Date(parts[0], parts[1]-1, parts[2])
+    }
+    // datetime (YYYY-MM-DDTHH:MM:SS(.sss)?(±TZ)?) -> parse components and construct local Date
+    const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+    if(m){
+      const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+      const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+      return new Date(y, mo-1, da, hh, mm, ss)
+    }
+  }catch(e){/* fallback */}
   return new Date(dstr)
+}
+
+function formatDateLocal(d: Date){
+  const y = d.getFullYear()
+  const m = String(d.getMonth()+1).padStart(2,'0')
+  const dd = String(d.getDate()).padStart(2,'0')
+  return `${y}-${m}-${dd}`
 }
 
 function startOfWeek(d: Date){
@@ -61,8 +78,8 @@ const AttendanceRecords: React.FC<Props> = ({ weekStart, refreshToken }) => {
 
   async function fetchForWeek(ws: Date){
     setLoading(true)
-    const start = ws.toISOString().slice(0,10)
-    const end = new Date(ws.getTime() + 6*24*60*60*1000).toISOString().slice(0,10)
+    const start = formatDateLocal(ws)
+    const end = formatDateLocal(new Date(ws.getTime() + 6*24*60*60*1000))
     try{
       const [aRes, caRes] = await Promise.all([
         fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`),
@@ -173,4 +190,3 @@ const AttendanceRecords: React.FC<Props> = ({ weekStart, refreshToken }) => {
 }
 
 export default AttendanceRecords
-

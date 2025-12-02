@@ -17,10 +17,18 @@ const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 
 function parseISODateToLocal(dstr: string){
   if(!dstr) return new Date(dstr)
-  const parts = dstr.split('-').map(p=>Number(p))
-  if(parts.length >= 3){
-    return new Date(parts[0], parts[1]-1, parts[2])
-  }
+  try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+      const parts = dstr.split('-').map(p=>Number(p))
+      return new Date(parts[0], parts[1]-1, parts[2])
+    }
+    const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+    if(m){
+      const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+      const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+      return new Date(y, mo-1, da, hh, mm, ss)
+    }
+  }catch(e){/* fallback */}
   return new Date(dstr)
 }
 
@@ -148,8 +156,14 @@ const ActivityCalendar: React.FC<ActivityCalendarProps> = ({ onWeekChange, onEve
   }, [activities])
 
   async function fetchActivities(){
-    const start = weekStart.toISOString().slice(0,10)
-    const end = new Date(weekStart.getTime() + 6*24*60*60*1000).toISOString().slice(0,10)
+    function formatDateLocal(d: Date){
+      const y = d.getFullYear()
+      const m = String(d.getMonth()+1).padStart(2,'0')
+      const dd = String(d.getDate()).padStart(2,'0')
+      return `${y}-${m}-${dd}`
+    }
+    const start = formatDateLocal(weekStart)
+    const end = formatDateLocal(new Date(weekStart.getTime() + 6*24*60*60*1000))
     try{
       const res = await fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`)
       if(res.ok){

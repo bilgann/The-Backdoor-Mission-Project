@@ -1,4 +1,5 @@
 import io
+import re
 import os
 import pandas as pd
 from flask import request, jsonify, send_file
@@ -181,11 +182,70 @@ def register_routes(app):
 
     @app.route("/clinic_records", methods=["POST"]) 
     def create_clinic_record():
-        payload = request.json
+        payload = request.json or {}
+
+        # Defensive: accept a variety of date string formats from the frontend
+        # Normalize common variations so marshmallow/DateTime can accept them.
+        try:
+            if isinstance(payload.get('date'), str):
+                s = payload.get('date').strip()
+                # convert trailing Z -> +00:00 so fromisoformat can handle it
+                if s.endswith('Z'):
+                    s = s[:-1] + '+00:00'
+                # replace first space between date and time with 'T' ("YYYY-MM-DD HH:MM:SS")
+                if re.search(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}", s):
+                    s = re.sub(r"\s+", 'T', s, count=1)
+                # try Python's fromisoformat first (faster, stricter)
+                try:
+                    payload['date'] = datetime.fromisoformat(s)
+                except Exception:
+                    # fall back to dateutil if available (more flexible)
+                    try:
+                        from dateutil import parser as _dateutil_parser
+                        payload['date'] = _dateutil_parser.parse(s)
+                    except Exception:
+                        # leave as original string and let marshmallow report validation errors
+                        payload['date'] = s
+        except Exception:
+            # If anything goes wrong while normalizing, leave payload as-is
+            pass
+
+        # If we parsed a timezone-aware datetime, convert it to a naive
+        # datetime in the server's local timezone so subsequent comparisons
+        # against `datetime.now()` (naive) won't raise TypeError and so we
+        # preserve the exact clock time the client submitted (converted
+        # into local time).
+        try:
+            parsed_date = payload.get('date') if isinstance(payload, dict) else None
+            if isinstance(parsed_date, datetime) and parsed_date.tzinfo is not None:
+                # astimezone() with no args converts to local timezone
+                payload['date'] = parsed_date.astimezone().replace(tzinfo=None)
+        except Exception:
+            # If conversion fails, leave payload['date'] as-is and let
+            # marshmallow validation handle it later.
+            pass
+
+        # Debug: log incoming payload and parsed date to help diagnose client-side formatting issues
+        try:
+            print(f"[DEBUG routes] create_clinic_record incoming payload: {payload}")
+            parsed = payload.get('date') if isinstance(payload, dict) else None
+            print(f"[DEBUG routes] create_clinic_record payload['date'] before parsing: {parsed} (type={type(parsed)})")
+        except Exception:
+            pass
+
         try:
             data = ClinicSchema().load(payload)
         except ValidationError as err:
-            return jsonify({"errors": err.messages}), 400
+            # Include a helpful debug object so frontend dev can see what failed
+            debug_info = {}
+            try:
+                debug_info['received_date'] = payload.get('date') if isinstance(payload, dict) else None
+                debug_info['received_date_type'] = type(payload.get('date')).__name__ if isinstance(payload, dict) and payload.get('date') is not None else None
+            except Exception:
+                pass
+            resp = {"errors": err.messages, "debug": debug_info}
+            print(f"[DEBUG routes] create_clinic_record validation failed: {resp}")
+            return jsonify(resp), 400
         # ensure date/time is present and is a datetime; default to now and clamp future times
         try:
             now_dt = datetime.now()

@@ -9,10 +9,18 @@ const dayColors = ['#27608F','#FC8C37','#F6254F','#C3E4FF','#C3FFD7']
 
 function parseISODateToLocal(dstr: string){
   if(!dstr) return new Date(dstr)
-  const parts = dstr.split('-').map(p=>Number(p))
-  if(parts.length >= 3){
-    return new Date(parts[0], parts[1]-1, parts[2])
-  }
+  try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+      const parts = dstr.split('-').map(p=>Number(p))
+      return new Date(parts[0], parts[1]-1, parts[2])
+    }
+    const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+    if(m){
+      const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+      const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+      return new Date(y, mo-1, da, hh, mm, ss)
+    }
+  }catch(e){/* fallback */}
   return new Date(dstr)
 }
 
@@ -23,6 +31,13 @@ function startOfWeek(d: Date){
   date.setDate(date.getDate() + diff)
   date.setHours(0,0,0,0)
   return date
+}
+
+function formatDateLocal(d: Date){
+  const y = d.getFullYear()
+  const m = String(d.getMonth()+1).padStart(2,'0')
+  const dd = String(d.getDate()).padStart(2,'0')
+  return `${y}-${m}-${dd}`
 }
 
 type ActivityItem = {
@@ -68,8 +83,8 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
   }, [weekStart, refreshToken])
 
   async function fetchForWeek(ws: Date){
-    const start = ws.toISOString().slice(0,10)
-    const end = new Date(ws.getTime() + 6*24*60*60*1000).toISOString().slice(0,10)
+    const start = formatDateLocal(ws)
+    const end = formatDateLocal(new Date(ws.getTime() + 6*24*60*60*1000))
     try{
       const [aRes, caRes] = await Promise.all([
         fetch(`${config.API_BASE}/activity?start_date=${start}&end_date=${end}`),
@@ -211,7 +226,10 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
       return
     }
     // use the current datetime for attendance record so ordering reflects submission time
-    const payload = { client_id: selectedId, activity_id, date: new Date().toISOString() }
+    // send ISO datetime without milliseconds and convert trailing Z to +00:00
+    // so backend can parse reliably when dateutil isn't available
+    const dateIso = new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00')
+    const payload = { client_id: selectedId, activity_id, date: dateIso }
     try{
       const res = await fetch(`${config.API_BASE}/client_activity`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
       if(res.ok){
@@ -303,7 +321,7 @@ const EditAttendanceRecords: React.FC<Props> = ({ weekStart, onDataChanged, refr
                                   <tr key={p.client_activity_id}>
                                     <td style={{paddingLeft:12}}>{act.activity_name}</td>
                                     <td>{p.client_name ?? `#${p.client_id}`}</td>
-                                    <td>{new Date(p.date).toLocaleString()}</td>
+                                    <td>{parseISODateToLocal(p.date).toLocaleString()}</td>
                                     <td>
                                       {cardEditModeMap[dayIdx] ? (
                                         <input

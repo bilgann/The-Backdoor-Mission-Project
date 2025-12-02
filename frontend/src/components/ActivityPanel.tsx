@@ -4,6 +4,23 @@ import Chart from './Chart'
 import CardFrame from './CardFrame'
 import '../styles/ClientsTotalPanel.css'
 
+function parseISODateToLocal(dstr: string){
+  if(!dstr) return new Date(dstr)
+  try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+      const parts = dstr.split('-').map(p=>Number(p))
+      return new Date(parts[0], parts[1]-1, parts[2])
+    }
+    const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+    if(m){
+      const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+      const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+      return new Date(y, mo-1, da, hh, mm, ss)
+    }
+  }catch(e){/* fallback */}
+  return new Date(dstr)
+}
+
 const RANGES: Array<'day'|'week'|'month'|'year'> = ['day','week','month','year']
 
 const ActivityPanel: React.FC = () => {
@@ -40,8 +57,15 @@ const ActivityPanel: React.FC = () => {
         endDate = new Date(today.getFullYear(), 11, 31)
       }
 
-      const sd = startDate.toISOString().slice(0, 10)
-      const ed = endDate.toISOString().slice(0, 10)
+      function formatDateLocal(d: Date){
+        const y = d.getFullYear()
+        const m = String(d.getMonth()+1).padStart(2,'0')
+        const dd = String(d.getDate()).padStart(2,'0')
+        return `${y}-${m}-${dd}`
+      }
+
+      const sd = formatDateLocal(startDate)
+      const ed = formatDateLocal(endDate)
 
       const resp = await fetch(`${config.API_BASE}/client_activity?start_date=${sd}&end_date=${ed}`)
       const records = await resp.json()
@@ -63,10 +87,10 @@ const ActivityPanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date) return
-            const hasTime = String(rec.date).includes('T')
-            const dt = new Date(rec.date)
+            const raw = rec.date
+            const hasTime = typeof raw === 'string' && raw.includes('T')
+            const dt = parseISODateToLocal(raw)
             if (!hasTime) {
-              // date-only: put into current bucket (bucketHour)
               const idx = hours.indexOf(bucketHour)
               if (idx >= 0) counts[idx]++
             } else {
@@ -93,8 +117,7 @@ const ActivityPanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date) return
-            const dt = new Date(rec.date)
-            // getDay: 0=Sun..6=Sat -> convert to Mon=0..Sun=6
+            const dt = parseISODateToLocal(rec.date)
             const dayIdx = dt.getDay() === 0 ? 6 : dt.getDay() - 1
             if (dayIdx >= 0 && dayIdx <= 6) counts[dayIdx]++
           })
@@ -108,7 +131,7 @@ const ActivityPanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date) return
-            const dt = new Date(rec.date)
+            const dt = parseISODateToLocal(rec.date)
             const dayIdx = Math.floor((dt.getTime() - start.getTime()) / (24*60*60*1000))
             if (dayIdx >= 0 && dayIdx < daysInMonth) counts[dayIdx]++
           })
@@ -123,7 +146,7 @@ const ActivityPanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date) return
-            const dt = new Date(rec.date)
+            const dt = parseISODateToLocal(rec.date)
             const m = dt.getMonth()
             counts[m]++
           })

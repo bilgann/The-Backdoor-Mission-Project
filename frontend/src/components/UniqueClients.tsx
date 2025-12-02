@@ -89,11 +89,28 @@ const UniqueClients = () => {
                 const clientSet = new Set<string>()
                 const perEndpointCounts: { [key: string]: number } = {}
 
+                function parseISODateToLocal(dstr: string){
+                    if(!dstr) return new Date(dstr)
+                    try{
+                        if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+                            const parts = dstr.split('-').map(p=>Number(p))
+                            return new Date(parts[0], parts[1]-1, parts[2])
+                        }
+                        const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+                        if(m){
+                            const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+                            const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+                            return new Date(y, mo-1, da, hh, mm, ss)
+                        }
+                    }catch(e){/* fallback */}
+                    return new Date(dstr)
+                }
+
                 const parseDate = (rec: any) => {
                     if (!rec) return null
-                    if (rec.time_in) return new Date(rec.time_in)
-                    if (rec.date) return new Date(rec.date)
-                    if (rec.created_at) return new Date(rec.created_at)
+                    if (rec.time_in) return parseISODateToLocal(rec.time_in)
+                    if (rec.date) return parseISODateToLocal(rec.date)
+                    if (rec.created_at) return parseISODateToLocal(rec.created_at)
                     return null
                 }
 

@@ -172,13 +172,19 @@ const Clinic: React.FC = () => {
                                     setSubmitting(true)
                                     try {
                                         const now = new Date()
+                                        // Build a local (timezone-naive) ISO-like datetime string
+                                        // `YYYY-MM-DDTHH:MM:SS` so the backend stores the same
+                                        // clock hour/minute the user clicked, rather than
+                                        // converting between timezones.
+                                        const pad = (n: number) => String(n).padStart(2, '0')
+                                        const localIsoNoMs = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
                                         const payload = {
                                             client_id: Number(selectedClient.id),
                                             purpose_of_visit: String(purpose).trim(),
-                                            // send full ISO datetime so server stores exact submit time
-                                            date: now.toISOString()
+                                            date: localIsoNoMs
                                         }
 
+                                        console.debug('Create clinic payload:', payload)
                                         const res = await fetch(`${config.API_BASE}/clinic_records`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
@@ -187,6 +193,7 @@ const Clinic: React.FC = () => {
 
                                         let body: any = null
                                         try { body = await res.json() } catch (_) { body = null }
+                                        console.debug('Create clinic response body:', body)
                                         if (!res.ok) {
                                             const details = body && typeof body === 'object' ? (body.error || body.message || JSON.stringify(body)) : body
                                             alert(`Failed to create record (status ${res.status}): ${details || res.statusText}`)

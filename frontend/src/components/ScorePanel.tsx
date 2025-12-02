@@ -4,6 +4,23 @@ import Chart from './Chart'
 import CardFrame from './CardFrame'
 import '../styles/ClientsTotalPanel.css'
 
+function parseISODateToLocal(dstr: string){
+  if(!dstr) return new Date(dstr)
+  try{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dstr)){
+      const parts = dstr.split('-').map(p=>Number(p))
+      return new Date(parts[0], parts[1]-1, parts[2])
+    }
+    const m = dstr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+    if(m){
+      const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3])
+      const hh = Number(m[4]), mm = Number(m[5]), ss = Number(m[6])
+      return new Date(y, mo-1, da, hh, mm, ss)
+    }
+  }catch(e){/* fallback */}
+  return new Date(dstr)
+}
+
 const ScorePanel: React.FC = () => {
   const [range, setRange] = useState<'day'|'week'|'month'|'year'>('day')
   const [avg, setAvg] = useState<number | null>(null)
@@ -40,7 +57,14 @@ const ScorePanel: React.FC = () => {
       const sd = startDate.toISOString().slice(0, 10)
       const ed = endDate.toISOString().slice(0, 10)
 
-      const resp = await fetch(`${config.API_BASE}/client_activity?start_date=${sd}&end_date=${ed}`)
+      function formatDateLocal(d: Date){
+        const y = d.getFullYear()
+        const m = String(d.getMonth()+1).padStart(2,'0')
+        const dd = String(d.getDate()).padStart(2,'0')
+        return `${y}-${m}-${dd}`
+      }
+
+      const resp = await fetch(`${config.API_BASE}/client_activity?start_date=${formatDateLocal(startDate)}&end_date=${formatDateLocal(endDate)}`)
       const records = await resp.json()
 
       // compute overall average score and response count
@@ -73,7 +97,8 @@ const ScorePanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date || rec.score === undefined || rec.score === null) return
-            const dt = new Date(rec.date)
+            const raw = rec.date
+            const dt = parseISODateToLocal(raw)
             const h = dt.getHours()
             if (h >= 9 && h <= 18) {
               const idx = hours.indexOf(h)
@@ -101,7 +126,7 @@ const ScorePanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date || rec.score === undefined || rec.score === null) return
-            const dt = new Date(rec.date)
+            const dt = parseISODateToLocal(rec.date)
             const dayIdx = dt.getDay() === 0 ? 6 : dt.getDay() - 1
             if (dayIdx >= 0 && dayIdx <= 6) {
               sums[dayIdx] += Number(rec.score)
@@ -119,7 +144,7 @@ const ScorePanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date || rec.score === undefined || rec.score === null) return
-            const dt = new Date(rec.date)
+            const dt = parseISODateToLocal(rec.date)
             const dayIdx = Math.floor((dt.getTime() - start.getTime()) / (24*60*60*1000))
             if (dayIdx >= 0 && dayIdx < daysInMonth) {
               sums[dayIdx] += Number(rec.score)
@@ -136,7 +161,7 @@ const ScorePanel: React.FC = () => {
         if (Array.isArray(records)) {
           records.forEach((rec: any) => {
             if (!rec.date || rec.score === undefined || rec.score === null) return
-            const dt = new Date(rec.date)
+            const dt = parseISODateToLocal(rec.date)
             const m = dt.getMonth()
             sums[m] += Number(rec.score)
             counts[m]++
